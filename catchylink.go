@@ -1,6 +1,7 @@
 package catchylink
 
 import (
+    "os"
     "fmt"
     "io/ioutil"
     "net/http"
@@ -8,17 +9,27 @@ import (
     "google.golang.org/appengine/log"
 )
 
+var index_html string
+
 func init() {
+
+    // read index.html only once, so we don't read it again and again and again
+    bytes, err := ioutil.ReadFile("web/index.html")
+    if err != nil {
+        fmt.Fprintf(os.Stderr,"YIKES!!!! Cannot read web/index.html");
+    } else {
+        index_html = string(bytes)
+    }
+
     http.HandleFunc("/", handler)
 }
 
 func homepage(w http.ResponseWriter, r *http.Request) {
-    text, err := ioutil.ReadFile("web/index.html")
-    if err != nil {
+    if len(index_html) <= 0 {
         ctx := appengine.NewContext(r)
         log.Errorf(ctx,"Could not read homepage")
     }
-    fmt.Fprint(w,string(text))
+    fmt.Fprint(w,index_html)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
