@@ -13,5 +13,8 @@ def open_browser_windows():
     shell("open http://localhost:8080/ &")
     shell("open http://localhost:8000/ &")
 
-open_browser_windows()
-shell("goapp serve ./")
+
+retCode = shell("go build")
+if retCode == 0:
+    open_browser_windows()
+    shell("goapp serve ./")
