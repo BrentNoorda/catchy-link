@@ -11,3 +11,4 @@ def shell(s):
 #shell("appcfg.py -A catchy-link update -V v" + str(int(time.time())) + " ./")
 
 shell("appcfg.py -A catchy-link update -V v1 ./")
+shell("open http://catchy.link/")
