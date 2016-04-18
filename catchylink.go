@@ -3,6 +3,7 @@ package catchylink
 import (
     "os"
     "fmt"
+    "html"
     "strings"
     "io/ioutil"
     "net/http"
@@ -71,9 +72,9 @@ func homepage_with_error_msg(w http.ResponseWriter,fieldname string,errormsg str
     page = strings.Replace(index_html,"{{"+fieldname+"-style}}","display:inline;",1)
     page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
 
-    page = strings.Replace(page,"{{longurl-value}}","value=\"" + form.longurl + "\"",1)
-    page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + form.catchyurl + "\"",1)
-    page = strings.Replace(page,"{{youremail-value}}","value=\"" + form.youremail + "\"",1)
+    page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.longurl) + "\"",1)
+    page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.catchyurl) + "\"",1)
+    page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.youremail) + "\"",1)
 
     fmt.Fprint(w,page)
 }
