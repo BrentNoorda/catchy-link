@@ -10,6 +10,10 @@ import (
     "google.golang.org/appengine/log"
 )
 
+type FormInput struct {
+    longurl, catchyurl, youremail string
+}
+
 var index_html string
 
 func init() {
@@ -25,26 +29,55 @@ func init() {
     http.HandleFunc("/", handler)
 }
 
-func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
-    ctx := appengine.NewContext(r)
-    r.ParseForm()
-    log.Infof(ctx,"POST FORM longurl=\"%s\"",r.PostFormValue("longurl"))
-    log.Infof(ctx,"POST FORM catchyurl=\"%s\"",strings.Join(r.Form["catchyurl"],""))
-    log.Infof(ctx,"POST FORM youremail=\"%s\"",r.Form["youremail"][0])
-    for k, v := range r.Form {
-        log.Infof(ctx,"key:%s", k)
-        log.Infof(ctx,"val:%s", strings.Join(v, ""))
+func errormsg_if_blank(value string,fieldDescription string) string {
+    if value == "" {
+        return fieldDescription + " must not be blank"
     }
-    homepage(w,r)
+    return ""
 }
 
-func homepage(w http.ResponseWriter, r *http.Request) {
-    if len(index_html) <= 0 {
-        ctx := appengine.NewContext(r)
-        log.Errorf(ctx,"Could not read homepage")
+func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
+    var errormsg string
+
+    r.ParseForm()
+    var form FormInput
+    form.longurl = r.PostFormValue("longurl")
+    form.catchyurl = r.PostFormValue("catchyurl")
+    form.youremail = r.PostFormValue("youremail")
+
+    // VALIDATE THE INPUT
+    if errormsg = errormsg_if_blank(form.longurl,"Long URL"); errormsg!="" {
+        homepage_with_error_msg(w,"longurl",errormsg,form)
+        return
     }
+    if errormsg = errormsg_if_blank(form.catchyurl,"Catchy URL"); errormsg!="" {
+        homepage_with_error_msg(w,"catchyurl",errormsg,form)
+        return
+    }
+    if errormsg = errormsg_if_blank(form.youremail,"Your Email"); errormsg!="" {
+        homepage_with_error_msg(w,"youremail",errormsg,form)
+        return
+    }
+
+    homepage(w)
+}
+
+func homepage(w http.ResponseWriter) {
     fmt.Fprint(w,index_html)
 }
+
+func homepage_with_error_msg(w http.ResponseWriter,fieldname string,errormsg string,form FormInput) {
+    var page string
+    page = strings.Replace(index_html,"{{"+fieldname+"-style}}","display:inline;",1)
+    page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
+
+    page = strings.Replace(page,"{{longurl-value}}","value=\"" + form.longurl + "\"",1)
+    page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + form.catchyurl + "\"",1)
+    page = strings.Replace(page,"{{youremail-value}}","value=\"" + form.youremail + "\"",1)
+
+    fmt.Fprint(w,page)
+}
+
 
 func handler(w http.ResponseWriter, r *http.Request) {
     ctx := appengine.NewContext(r)
@@ -53,7 +86,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
         if r.Method == "POST" {
             post_new_catchy_link(w,r)
         } else {
-            homepage(w,r)
+            homepage(w)
         }
     } else {
         fmt.Fprint(w, "Catchylink3, world!<br/>Path:" + r.URL.Path + "<br/>RawPath:" + r.URL.RawPath + "<br/>RawQuery:" + r.URL.RawQuery)

@@ -10,7 +10,7 @@
       (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
       m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
       })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-      if ( window.location.hostname.toLowerCase().indexOf("catchy.link") !== -1 ){
+      if ( ("."+window.location.hostname.toLowerCase()+"/").indexOf(".catchy.link/") !== -1 ){
         ga('create', 'UA-1754630-12', 'auto');
         ga('send', 'pageview');
       }
@@ -43,14 +43,19 @@
       input {
         width: 100%;
       }
+      .errormsg {
+        color: red;
+        font-weight: bold;
+        display: none;
+      }
     </style>
 </head>
 <body>
   <form action="/" method="post">
-    <table width="100%">
+    <table width="97%">
       <tr>
         <td style="padding-left:0;">
-          <h2>Catchy.Link</h2>
+          <h2>catchy.link</h2>
         </td>
         <td colspan="2">
           <h3>Turn a long internet url into something that is easy to remember.</h3>
@@ -61,7 +66,8 @@
           <label for="longurl">Long URL</label>
         </td>
         <td colspan="2">
-          <input type="text" id="longurl" name="longurl" />
+          <input type="text" id="longurl" name="longurl" {{longurl-value}} />
+          <span class="errormsg" style="{{longurl-style}}"><br/>{{longurl-errormsg}}</span>
        </td>
       </tr>
       <tr>
@@ -72,7 +78,8 @@
           <span style="opacity:0.5;">http://catchy.link/</span>
        </td>
         <td width="90%" style="padding-left:0;">
-          <input type="text" id="catchyurl" name="catchyurl" />
+          <input type="text" id="catchyurl" name="catchyurl" {{catchyurl-value}} />
+          <span class="errormsg" style="{{catchyurl-style}}"><br/>{{catchyurl-errormsg}}</span>
        </td>
       </tr>
       <tr>
@@ -80,7 +87,8 @@
           <label for="youremail">Your Email</label>
         </td>
         <td colspan="2">
-          <input type="text" id="youremail" name="youremail" />
+          <input type="text" id="youremail" name="youremail" {{youremail-value}} />
+          <span class="errormsg" style="{{youremail-style}}"><br/>{{youremail-errormsg}}</span>
        </td>
       </tr>
       <tr>
