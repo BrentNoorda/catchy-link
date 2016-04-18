@@ -42,9 +42,9 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     r.ParseForm()
     var form FormInput
-    form.longurl = r.PostFormValue("longurl")
-    form.catchyurl = r.PostFormValue("catchyurl")
-    form.youremail = r.PostFormValue("youremail")
+    form.longurl = strings.TrimSpace(r.PostFormValue("longurl"))
+    form.catchyurl = strings.TrimSpace(r.PostFormValue("catchyurl"))
+    form.youremail = strings.TrimSpace(r.PostFormValue("youremail"))
 
     // VALIDATE THE INPUT
     if errormsg = errormsg_if_blank(form.longurl,"Long URL"); errormsg!="" {
@@ -57,6 +57,30 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     }
     if errormsg = errormsg_if_blank(form.youremail,"Your Email"); errormsg!="" {
         homepage_with_error_msg(w,"youremail",errormsg,form)
+        return
+    }
+    if strings.ContainsAny(form.longurl," \t\r\n") {
+        homepage_with_error_msg(w,"longurl","Long URL cannot contain space characters",form)
+        return
+    }
+    if strings.ContainsAny(form.catchyurl," \t\r\n") {
+        homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain space characters",form)
+        return
+    }
+    if strings.ContainsAny(form.catchyurl,"+%") {
+        homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"",form)
+        return
+    }
+    if 250 < len(form.longurl) {
+        homepage_with_error_msg(w,"longurl","Long URL is too long (keep it under 250)",form)
+        return
+    }
+    if 250 < len(form.catchyurl) {
+        homepage_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",form)
+        return
+    }
+    if 250 < len(form.youremail) {
+        homepage_with_error_msg(w,"youremail","Your Email is too long (keep it under 250)",form)
         return
     }
 
