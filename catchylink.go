@@ -6,8 +6,10 @@ import (
     "html"
     "time"
     "strings"
+    "strconv"
     "io/ioutil"
     "net/http"
+    "math/rand"
     "google.golang.org/appengine"
     "google.golang.org/appengine/log"
     "google.golang.org/appengine/mail"
@@ -18,17 +20,28 @@ const RequestTimeMin = 10       // requests will timeout in this many minutes
 const sender_email_address = "emailer@catchy-link.appspotmail.com"
 
 type CatchyLinkRequest struct {
-        longurl, catchyurl, youremail string
-        expire   time.Time
+    uniqueKey string
+    longurl, catchyurl, youremail string
+    expire   time.Time
 }
 
 type FormInput struct {
     longurl, catchyurl, youremail string
 }
 
+func random_string(minLen int) string {
+    ret := ""
+    for len(ret) < minLen {
+        ret += strconv.Itoa(int(rand.Uint32()))
+    }
+    return ret
+}
+
 var index_html string
 
 func init() {
+
+    rand.Seed(time.Now().UnixNano())
 
     // read index.html only once, so we don't read it again and again and again
     bytes, err := ioutil.ReadFile("web/index.html")
@@ -97,12 +110,16 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     }
 
     // create CatchyLinkRequest and inform user about it
+    expire := time.Now().Add( time.Duration(RequestTimeMin*1000*1000*1000) )
     linkRequest := CatchyLinkRequest {
+        uniqueKey: strconv.FormatInt(expire.UnixNano(),10) + random_string(100),
         longurl: form.longurl,
         catchyurl: form.catchyurl,
         youremail: form.youremail,
-        expire: time.Now().Add( time.Duration(RequestTimeMin*1000*1000*1000) ),
+        expire: expire,
     }
+    log.Infof(ctx,"uniqueKey = %s",linkRequest.uniqueKey)
+    log.Infof(ctx,"expire = %d",linkRequest.expire.UnixNano())
     _, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
     if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
