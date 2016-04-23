@@ -4,12 +4,22 @@ import (
     "os"
     "fmt"
     "html"
+    "time"
     "strings"
     "io/ioutil"
     "net/http"
     "google.golang.org/appengine"
+    "google.golang.org/appengine/datastore"
     "google.golang.org/appengine/log"
 )
+
+const RequestTimeMin = 10       // requests will timeout in this many minutes
+
+
+type CatchyLinkRequest struct {
+        longurl, catchyurl, youremail string
+        expire   time.Time
+}
 
 type FormInput struct {
     longurl, catchyurl, youremail string
@@ -39,6 +49,7 @@ func errormsg_if_blank(value string,fieldDescription string) string {
 
 func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     var errormsg string
+    ctx := appengine.NewContext(r)
 
     r.ParseForm()
     var form FormInput
@@ -82,6 +93,19 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     if 250 < len(form.youremail) {
         homepage_with_error_msg(w,"youremail","Your Email is too long (keep it under 250)",form)
         return
+    }
+
+    // create CatchyLinkRequest and inform user about it
+    linkRequest := CatchyLinkRequest {
+        longurl: form.longurl,
+        catchyurl: form.catchyurl,
+        youremail: form.youremail,
+        expire: time.Now().Add( time.Duration(RequestTimeMin*1000*1000*1000) ),
+    }
+    _, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
+    if err != nil {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+            return
     }
 
     homepage(w)
