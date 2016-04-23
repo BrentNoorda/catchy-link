@@ -51,6 +51,7 @@ func init() {
         index_html = string(bytes)
     }
 
+    http.HandleFunc("/_/", admin_handler)
     http.HandleFunc("/", handler)
 }
 
@@ -170,4 +171,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
     } else {
         fmt.Fprint(w, "Catchylink3, world!<br/>Path:" + r.URL.Path + "<br/>RawPath:" + r.URL.RawPath + "<br/>RawQuery:" + r.URL.RawQuery)
     }
+}
+
+func admin_handler(w http.ResponseWriter, r *http.Request) {
+    ctx := appengine.NewContext(r)
+    log.Infof(ctx,"%s","!!!!admin_handler<br/>Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
 }
