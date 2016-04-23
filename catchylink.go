@@ -176,4 +176,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func admin_handler(w http.ResponseWriter, r *http.Request) {
     ctx := appengine.NewContext(r)
     log.Infof(ctx,"%s","!!!!admin_handler<br/>Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
+
+    query := datastore.NewQuery("linkrequest").KeysOnly()
+    keys, err := query.GetAll(ctx, nil)
+    if err != nil {
+        log.Errorf(ctx, "DeleteMulti error: %v", err)
+    } else {
+        err := datastore.DeleteMulti(ctx,keys)
+        log.Errorf(ctx, "DeleteMulti error: %v", err)
+    }
 }
