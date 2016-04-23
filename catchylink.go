@@ -9,12 +9,13 @@ import (
     "io/ioutil"
     "net/http"
     "google.golang.org/appengine"
-    "google.golang.org/appengine/datastore"
     "google.golang.org/appengine/log"
+    "google.golang.org/appengine/mail"
+    "google.golang.org/appengine/datastore"
 )
 
 const RequestTimeMin = 10       // requests will timeout in this many minutes
-
+const sender_email_address = "emailer@catchy-link.appspotmail.com"
 
 type CatchyLinkRequest struct {
         longurl, catchyurl, youremail string
@@ -107,6 +108,18 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
     }
+
+    // send email to user
+    msg := &mail.Message{
+        Sender:  sender_email_address,
+        To:      []string{form.youremail},
+        Subject: "Email from CatchyLink",
+        Body:    "Email from catchylink yes it is",
+    }
+    if err := mail.Send(ctx, msg); err != nil {
+            log.Errorf(ctx, "Couldn't send email: %v", err)
+    }
+
 
     homepage(w)
 }
