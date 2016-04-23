@@ -20,13 +20,13 @@ const RequestTimeMin = 10       // requests will timeout in this many minutes
 const sender_email_address = "emailer@catchy-link.appspotmail.com"
 
 type CatchyLinkRequest struct {
-    uniqueKey string
-    longurl, catchyurl, youremail string
-    expire   time.Time
+    UniqueKey string
+    LongUrl, CatchyUrl, YourEmail string
+    Expire   int64
 }
 
 type FormInput struct {
-    longurl, catchyurl, youremail string
+    LongUrl, CatchyUrl, YourEmail string
 }
 
 func random_string(minLen int) string {
@@ -68,59 +68,59 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     r.ParseForm()
     var form FormInput
-    form.longurl = strings.TrimSpace(r.PostFormValue("longurl"))
-    form.catchyurl = strings.TrimSpace(r.PostFormValue("catchyurl"))
-    form.youremail = strings.TrimSpace(r.PostFormValue("youremail"))
+    form.LongUrl = strings.TrimSpace(r.PostFormValue("longurl"))
+    form.CatchyUrl = strings.TrimSpace(r.PostFormValue("catchyurl"))
+    form.YourEmail = strings.TrimSpace(r.PostFormValue("youremail"))
 
     // VALIDATE THE INPUT
-    if errormsg = errormsg_if_blank(form.longurl,"Long URL"); errormsg!="" {
+    if errormsg = errormsg_if_blank(form.LongUrl,"Long URL"); errormsg!="" {
         homepage_with_error_msg(w,"longurl",errormsg,form)
         return
     }
-    if errormsg = errormsg_if_blank(form.catchyurl,"Catchy URL"); errormsg!="" {
+    if errormsg = errormsg_if_blank(form.CatchyUrl,"Catchy URL"); errormsg!="" {
         homepage_with_error_msg(w,"catchyurl",errormsg,form)
         return
     }
-    if errormsg = errormsg_if_blank(form.youremail,"Your Email"); errormsg!="" {
+    if errormsg = errormsg_if_blank(form.YourEmail,"Your Email"); errormsg!="" {
         homepage_with_error_msg(w,"youremail",errormsg,form)
         return
     }
-    if strings.ContainsAny(form.longurl," \t\r\n") {
+    if strings.ContainsAny(form.LongUrl," \t\r\n") {
         homepage_with_error_msg(w,"longurl","Long URL cannot contain space characters",form)
         return
     }
-    if strings.ContainsAny(form.catchyurl," \t\r\n") {
+    if strings.ContainsAny(form.CatchyUrl," \t\r\n") {
         homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain space characters",form)
         return
     }
-    if strings.ContainsAny(form.catchyurl,"+%") {
+    if strings.ContainsAny(form.CatchyUrl,"+%") {
         homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"",form)
         return
     }
-    if 250 < len(form.longurl) {
+    if 250 < len(form.LongUrl) {
         homepage_with_error_msg(w,"longurl","Long URL is too long (keep it under 250)",form)
         return
     }
-    if 250 < len(form.catchyurl) {
+    if 250 < len(form.CatchyUrl) {
         homepage_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",form)
         return
     }
-    if 250 < len(form.youremail) {
+    if 250 < len(form.YourEmail) {
         homepage_with_error_msg(w,"youremail","Your Email is too long (keep it under 250)",form)
         return
     }
 
     // create CatchyLinkRequest and inform user about it
-    expire := time.Now().Add( time.Duration(RequestTimeMin*1000*1000*1000) )
+    expire := time.Now().Add( time.Duration(RequestTimeMin*60*1000*1000*1000) )
     linkRequest := CatchyLinkRequest {
-        uniqueKey: strconv.FormatInt(expire.UnixNano(),10) + random_string(100),
-        longurl: form.longurl,
-        catchyurl: form.catchyurl,
-        youremail: form.youremail,
-        expire: expire,
+        UniqueKey: strconv.FormatInt(expire.UnixNano(),10) + random_string(100),
+        LongUrl: form.LongUrl,
+        CatchyUrl: form.CatchyUrl,
+        YourEmail: form.YourEmail,
+        Expire: expire.Unix(),
     }
-    log.Infof(ctx,"uniqueKey = %s",linkRequest.uniqueKey)
-    log.Infof(ctx,"expire = %d",linkRequest.expire.UnixNano())
+    log.Infof(ctx,"uniqueKey = %s",linkRequest.UniqueKey)
+    log.Infof(ctx,"expire = %d",linkRequest.Expire)
     _, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
     if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -130,7 +130,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     // send email to user
     msg := &mail.Message{
         Sender:  sender_email_address,
-        To:      []string{form.youremail},
+        To:      []string{form.YourEmail},
         Subject: "Email from CatchyLink",
         Body:    "Email from catchylink yes it is",
     }
@@ -151,9 +151,9 @@ func homepage_with_error_msg(w http.ResponseWriter,fieldname string,errormsg str
     page = strings.Replace(index_html,"{{"+fieldname+"-style}}","display:inline;",1)
     page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
 
-    page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.longurl) + "\"",1)
-    page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.catchyurl) + "\"",1)
-    page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.youremail) + "\"",1)
+    page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.LongUrl) + "\"",1)
+    page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.CatchyUrl) + "\"",1)
+    page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.YourEmail) + "\"",1)
 
     fmt.Fprint(w,page)
 }
@@ -177,12 +177,14 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
     ctx := appengine.NewContext(r)
     log.Infof(ctx,"%s","!!!!admin_handler<br/>Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
 
-    query := datastore.NewQuery("linkrequest").KeysOnly()
+    query := datastore.NewQuery("linkrequest").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
     keys, err := query.GetAll(ctx, nil)
     if err != nil {
-        log.Errorf(ctx, "DeleteMulti error: %v", err)
+        log.Errorf(ctx, "query error: %v", err)
     } else {
         err := datastore.DeleteMulti(ctx,keys)
-        log.Errorf(ctx, "DeleteMulti error: %v", err)
+        if err != nil {
+            log.Errorf(ctx, "DeleteMulti error: %v, keys = %v", err,keys)
+        }
     }
 }
