@@ -19,6 +19,12 @@ import (
 const RequestTimeMin = 10       // requests will timeout in this many minutes
 const sender_email_address = "emailer@catchy-link.appspotmail.com"
 
+var disallowed_roots = [...]string {
+    "index.",
+    "favicon.ico",
+    "robots.txt",
+}
+
 type CatchyLinkRequest struct {
     UniqueKey string
     LongUrl, CatchyUrl, YourEmail string
@@ -51,6 +57,7 @@ func init() {
         index_html = string(bytes)
     }
 
+    http.HandleFunc("/robots.txt", robots_txt_handler)
     http.HandleFunc("/_/", admin_handler)
     http.HandleFunc("/", handler)
 }
@@ -71,6 +78,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     form.LongUrl = strings.TrimSpace(r.PostFormValue("longurl"))
     form.CatchyUrl = strings.TrimSpace(r.PostFormValue("catchyurl"))
     form.YourEmail = strings.TrimSpace(r.PostFormValue("youremail"))
+    lowerCatchyUrl := strings.ToLower(form.CatchyUrl)
 
     // VALIDATE THE INPUT
     if errormsg = errormsg_if_blank(form.LongUrl,"Long URL"); errormsg!="" {
@@ -101,13 +109,21 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         homepage_with_error_msg(w,"longurl","Long URL is too long (keep it under 250)",form)
         return
     }
-    if 250 < len(form.CatchyUrl) {
+    if 250 < len(lowerCatchyUrl) {
         homepage_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",form)
         return
     }
     if 250 < len(form.YourEmail) {
         homepage_with_error_msg(w,"youremail","Your Email is too long (keep it under 250)",form)
         return
+    }
+
+    // check that it's not one of our few disallowed files
+    for _, each := range disallowed_roots {
+        if strings.HasPrefix(lowerCatchyUrl,each) {
+            homepage_with_error_msg(w,"catchyurl","Cathy URL cannot begin with \"" + each + "\"",form)
+            return
+        }
     }
 
     // create CatchyLinkRequest and inform user about it
@@ -171,6 +187,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
     } else {
         fmt.Fprint(w, "Catchylink3, world!<br/>Path:" + r.URL.Path + "<br/>RawPath:" + r.URL.RawPath + "<br/>RawQuery:" + r.URL.RawQuery)
     }
+}
+
+func robots_txt_handler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprint(w, "user-agent: *\r\nAllow: /$\r\nDisallow: /\r\n")
 }
 
 func admin_handler(w http.ResponseWriter, r *http.Request) {
