@@ -16,6 +16,7 @@ import (
     "google.golang.org/appengine/datastore"
 )
 
+const myRootUrl = "http://catchy.link"
 const RequestTimeMin = 10       // requests will timeout in this many minutes
 const sender_email_address = "emailer@catchy-link.appspotmail.com"
 
@@ -23,6 +24,9 @@ var disallowed_roots = [...]string {
     "index.",
     "favicon.ico",
     "robots.txt",
+    "_/",
+    "~/",
+    "-/",
 }
 
 type CatchyLinkRequest struct {
@@ -58,7 +62,8 @@ func init() {
     }
 
     http.HandleFunc("/robots.txt", robots_txt_handler)
-    http.HandleFunc("/_/", admin_handler)
+    http.HandleFunc("/-/", admin_handler)
+    http.HandleFunc("/~/", email_response_handler)
     http.HandleFunc("/", handler)
 }
 
@@ -129,19 +134,21 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     // create CatchyLinkRequest and inform user about it
     expire := time.Now().Add( time.Duration(RequestTimeMin*60*1000*1000*1000) )
     linkRequest := CatchyLinkRequest {
-        UniqueKey: strconv.FormatInt(expire.UnixNano(),10) + random_string(100),
+        UniqueKey: random_string(55),
         LongUrl: form.LongUrl,
         CatchyUrl: form.CatchyUrl,
         YourEmail: form.YourEmail,
         Expire: expire.Unix(),
     }
-    log.Infof(ctx,"uniqueKey = %s",linkRequest.UniqueKey)
-    log.Infof(ctx,"expire = %d",linkRequest.Expire)
-    _, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
+    key, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
     if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
     }
+
+    doitUrl := fmt.Sprintf("%s/~/doit/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
+    cancelUrl := fmt.Sprintf("%s/~/cancel/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
+    log.Infof(ctx,"\n\n\ndoitUrl = %s\n\ncancelUrl = %s\n\n  ",doitUrl,cancelUrl)
 
     // send email to user
     msg := &mail.Message{
@@ -151,7 +158,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         Body:    "Email from catchylink yes it is",
     }
     if err := mail.Send(ctx, msg); err != nil {
-            log.Errorf(ctx, "Couldn't send email: %v", err)
+        log.Errorf(ctx, "Couldn't send email: %v", err)
     }
 
 
@@ -193,18 +200,40 @@ func robots_txt_handler(w http.ResponseWriter, r *http.Request) {
     fmt.Fprint(w, "user-agent: *\r\nAllow: /$\r\nDisallow: /\r\n")
 }
 
+func email_response_handler(w http.ResponseWriter, r *http.Request) {
+    ctx := appengine.NewContext(r)
+    parts := strings.Split(r.URL.Path,"/")
+    if len(parts) < 5 {
+        log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
+        homepage(w)
+    } else {
+        command := parts[2]
+        dbid, err := strconv.Atoi(parts[3])
+        uniqueKey := parts[4]
+        log.Errorf(ctx,"\ncommand = %s\ndbid = %d\nuniqueKey = %s\n",command,dbid,uniqueKey)
+        if err != nil {
+            log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"\nerror: %v",r.URL.Path,err)
+            homepage(w)
+        } else {
+            homepage(w)
+        }
+    }
+}
+
 func admin_handler(w http.ResponseWriter, r *http.Request) {
     ctx := appengine.NewContext(r)
     log.Infof(ctx,"%s","!!!!admin_handler<br/>Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
 
-    query := datastore.NewQuery("linkrequest").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
-    keys, err := query.GetAll(ctx, nil)
-    if err != nil {
-        log.Errorf(ctx, "query error: %v", err)
-    } else {
-        err := datastore.DeleteMulti(ctx,keys)
+    if r.URL.Path == "/-/cleanup_old_link_requests" {
+        query := datastore.NewQuery("linkrequest").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
+        keys, err := query.GetAll(ctx, nil)
         if err != nil {
-            log.Errorf(ctx, "DeleteMulti error: %v, keys = %v", err,keys)
+            log.Errorf(ctx, "query error: %v", err)
+        } else {
+            err := datastore.DeleteMulti(ctx,keys)
+            if err != nil {
+                log.Errorf(ctx, "DeleteMulti error: %v, keys = %v", err,keys)
+            }
         }
     }
 }
