@@ -87,46 +87,46 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     // VALIDATE THE INPUT
     if errormsg = errormsg_if_blank(form.LongUrl,"Long URL"); errormsg!="" {
-        homepage_with_error_msg(w,"longurl",errormsg,form)
+        homepage_with_error_msg(w,"longurl",errormsg,&form)
         return
     }
     if errormsg = errormsg_if_blank(form.CatchyUrl,"Catchy URL"); errormsg!="" {
-        homepage_with_error_msg(w,"catchyurl",errormsg,form)
+        homepage_with_error_msg(w,"catchyurl",errormsg,&form)
         return
     }
     if errormsg = errormsg_if_blank(form.YourEmail,"Your Email"); errormsg!="" {
-        homepage_with_error_msg(w,"youremail",errormsg,form)
+        homepage_with_error_msg(w,"youremail",errormsg,&form)
         return
     }
     if strings.ContainsAny(form.LongUrl," \t\r\n") {
-        homepage_with_error_msg(w,"longurl","Long URL cannot contain space characters",form)
+        homepage_with_error_msg(w,"longurl","Long URL cannot contain space characters",&form)
         return
     }
     if strings.ContainsAny(form.CatchyUrl," \t\r\n") {
-        homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain space characters",form)
+        homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain space characters",&form)
         return
     }
     if strings.ContainsAny(form.CatchyUrl,"+%") {
-        homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"",form)
+        homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"",&form)
         return
     }
     if 250 < len(form.LongUrl) {
-        homepage_with_error_msg(w,"longurl","Long URL is too long (keep it under 250)",form)
+        homepage_with_error_msg(w,"longurl","Long URL is too long (keep it under 250)",&form)
         return
     }
     if 250 < len(lowerCatchyUrl) {
-        homepage_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",form)
+        homepage_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",&form)
         return
     }
     if 250 < len(form.YourEmail) {
-        homepage_with_error_msg(w,"youremail","Your Email is too long (keep it under 250)",form)
+        homepage_with_error_msg(w,"youremail","Your Email is too long (keep it under 250)",&form)
         return
     }
 
     // check that it's not one of our few disallowed files
     for _, each := range disallowed_roots {
         if strings.HasPrefix(lowerCatchyUrl,each) {
-            homepage_with_error_msg(w,"catchyurl","Cathy URL cannot begin with \"" + each + "\"",form)
+            homepage_with_error_msg(w,"catchyurl","Cathy URL cannot begin with \"" + each + "\"",&form)
             return
         }
     }
@@ -169,14 +169,16 @@ func homepage(w http.ResponseWriter) {
     fmt.Fprint(w,index_html)
 }
 
-func homepage_with_error_msg(w http.ResponseWriter,fieldname string,errormsg string,form FormInput) {
+func homepage_with_error_msg(w http.ResponseWriter,fieldname string,errormsg string,form *FormInput) {
     var page string
     page = strings.Replace(index_html,"{{"+fieldname+"-style}}","display:inline;",1)
     page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
 
-    page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.LongUrl) + "\"",1)
-    page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.CatchyUrl) + "\"",1)
-    page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.YourEmail) + "\"",1)
+    if form != nil {
+        page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.LongUrl) + "\"",1)
+        page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.CatchyUrl) + "\"",1)
+        page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.YourEmail) + "\"",1)
+    }
 
     fmt.Fprint(w,page)
 }
@@ -205,17 +207,22 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
     parts := strings.Split(r.URL.Path,"/")
     if len(parts) < 5 {
         log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
-        homepage(w)
+        homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
     } else {
         command := parts[2]
         dbid, err := strconv.Atoi(parts[3])
         uniqueKey := parts[4]
-        log.Errorf(ctx,"\ncommand = %s\ndbid = %d\nuniqueKey = %s\n",command,dbid,uniqueKey)
         if err != nil {
             log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"\nerror: %v",r.URL.Path,err)
-            homepage(w)
+            homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
         } else {
-            homepage(w)
+            if command == "doit"  ||  command == "cancel" {
+                log.Errorf(ctx,"dbid = %d, uniqueKey = %s",dbid,uniqueKey)
+                homepage(w)
+            } else {
+                log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
+                homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
+            }
         }
     }
 }

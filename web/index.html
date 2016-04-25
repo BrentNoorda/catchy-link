@@ -17,9 +17,6 @@
       }
     </script>
     <style media="screen" type="text/css">
-      body {
-        max-width: 800px;
-      }
       li {
         margin-top: 0.3em;
       }
@@ -53,13 +50,14 @@
 </head>
 <body>
   <form action="/" method="post">
-    <table width="97%">
+    <table width="97%" style="margin: auto;max-width:800px" align="center">
       <tr>
         <td style="padding-left:0;">
           <h2>catchy.link</h2>
         </td>
         <td colspan="2">
           <h3>Turn a long internet url into something that is easy to remember.</h3>
+          <span class="errormsg" style="{{globalerror-style}};font-size:150%;">{{globalerror-errormsg}}</span>
         </td>
       </tr>
       <tr>
