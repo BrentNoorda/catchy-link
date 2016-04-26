@@ -18,7 +18,7 @@ import (
 
 const myRootUrl = "http://catchy.link"
 const RequestTimeMin = 10       // requests will timeout in this many minutes
-const sender_email_address = "emailer@catchy-link.appspotmail.com"
+const sender_email_address = "verify@catchy-link.appspotmail.com"
 
 var disallowed_roots = [...]string {
     "index.",
@@ -210,15 +210,28 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
         homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
     } else {
         command := parts[2]
-        dbid, err := strconv.Atoi(parts[3])
+        dbid, err := strconv.ParseInt(parts[3],10,64)
         uniqueKey := parts[4]
         if err != nil {
             log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"\nerror: %v",r.URL.Path,err)
             homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
         } else {
             if command == "doit"  ||  command == "cancel" {
-                log.Errorf(ctx,"dbid = %d, uniqueKey = %s",dbid,uniqueKey)
-                homepage(w)
+
+                // check if this record exists and is still valid
+                k := datastore.NewKey(ctx, "linkrequest", "", dbid, nil)
+                log.Infof(ctx,"\n\n\nk = %v\n\n\n ",k)
+
+                e := new(CatchyLinkRequest)
+                if err := datastore.Get(ctx, k, e); err != nil {
+                    log.Errorf(ctx,"email_reponse_handler datastore.Get failed. URL.Path:%s, err:%v",r.URL.Path,err)
+                    homepage_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
+                } else if e.UniqueKey != uniqueKey {
+                    log.Errorf(ctx,"email_reponse_handler datastore.Get failed. URL.Path:%s, unique key did not match.",r.URL.Path)
+                    homepage_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
+                } else {
+                    homepage(w)
+                }
             } else {
                 log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
                 homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
