@@ -1,78 +1,15 @@
 package catchylink
 
 import (
-    "os"
     "fmt"
-    "html"
     "time"
     "strings"
-    "strconv"
-    "io/ioutil"
     "net/http"
-    "math/rand"
     "google.golang.org/appengine"
     "google.golang.org/appengine/log"
     "google.golang.org/appengine/mail"
     "google.golang.org/appengine/datastore"
 )
-
-const myRootUrl = "http://catchy.link"
-const RequestTimeMin = 10       // requests will timeout in this many minutes
-const sender_email_address = "verify@catchy-link.appspotmail.com"
-
-var disallowed_roots = [...]string {
-    "index.",
-    "favicon.ico",
-    "robots.txt",
-    "_/",
-    "~/",
-    "-/",
-}
-
-type CatchyLinkRequest struct {
-    UniqueKey string
-    LongUrl, CatchyUrl, YourEmail string
-    Expire   int64
-}
-
-type FormInput struct {
-    LongUrl, CatchyUrl, YourEmail string
-}
-
-func random_string(minLen int) string {
-    ret := ""
-    for len(ret) < minLen {
-        ret += strconv.Itoa(int(rand.Uint32()))
-    }
-    return ret
-}
-
-var index_html string
-
-func init() {
-
-    rand.Seed(time.Now().UnixNano())
-
-    // read index.html only once, so we don't read it again and again and again
-    bytes, err := ioutil.ReadFile("web/index.html")
-    if err != nil {
-        fmt.Fprintf(os.Stderr,"YIKES!!!! Cannot read web/index.html");
-    } else {
-        index_html = string(bytes)
-    }
-
-    http.HandleFunc("/robots.txt", robots_txt_handler)
-    http.HandleFunc("/-/", admin_handler)
-    http.HandleFunc("/~/", email_response_handler)
-    http.HandleFunc("/", handler)
-}
-
-func errormsg_if_blank(value string,fieldDescription string) string {
-    if value == "" {
-        return fieldDescription + " must not be blank"
-    }
-    return ""
-}
 
 func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     var errormsg string
@@ -161,99 +98,5 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         log.Errorf(ctx, "Couldn't send email: %v", err)
     }
 
-
     homepage(w)
-}
-
-func homepage(w http.ResponseWriter) {
-    fmt.Fprint(w,index_html)
-}
-
-func homepage_with_error_msg(w http.ResponseWriter,fieldname string,errormsg string,form *FormInput) {
-    var page string
-    page = strings.Replace(index_html,"{{"+fieldname+"-style}}","display:inline;",1)
-    page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
-
-    if form != nil {
-        page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.LongUrl) + "\"",1)
-        page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.CatchyUrl) + "\"",1)
-        page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.YourEmail) + "\"",1)
-    }
-
-    fmt.Fprint(w,page)
-}
-
-
-func handler(w http.ResponseWriter, r *http.Request) {
-    ctx := appengine.NewContext(r)
-    log.Infof(ctx,"%s","Catchylink3, world!<br/>Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
-    if r.URL.Path == "/" {
-        if r.Method == "POST" {
-            post_new_catchy_link(w,r)
-        } else {
-            homepage(w)
-        }
-    } else {
-        fmt.Fprint(w, "Catchylink3, world!<br/>Path:" + r.URL.Path + "<br/>RawPath:" + r.URL.RawPath + "<br/>RawQuery:" + r.URL.RawQuery)
-    }
-}
-
-func robots_txt_handler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprint(w, "user-agent: *\r\nAllow: /$\r\nDisallow: /\r\n")
-}
-
-func email_response_handler(w http.ResponseWriter, r *http.Request) {
-    ctx := appengine.NewContext(r)
-    parts := strings.Split(r.URL.Path,"/")
-    if len(parts) < 5 {
-        log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
-        homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
-    } else {
-        command := parts[2]
-        dbid, err := strconv.ParseInt(parts[3],10,64)
-        uniqueKey := parts[4]
-        if err != nil {
-            log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"\nerror: %v",r.URL.Path,err)
-            homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
-        } else {
-            if command == "doit"  ||  command == "cancel" {
-
-                // check if this record exists and is still valid
-                k := datastore.NewKey(ctx, "linkrequest", "", dbid, nil)
-                log.Infof(ctx,"\n\n\nk = %v\n\n\n ",k)
-
-                e := new(CatchyLinkRequest)
-                if err := datastore.Get(ctx, k, e); err != nil {
-                    log.Errorf(ctx,"email_reponse_handler datastore.Get failed. URL.Path:%s, err:%v",r.URL.Path,err)
-                    homepage_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
-                } else if e.UniqueKey != uniqueKey {
-                    log.Errorf(ctx,"email_reponse_handler datastore.Get failed. URL.Path:%s, unique key did not match.",r.URL.Path)
-                    homepage_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
-                } else {
-                    homepage(w)
-                }
-            } else {
-                log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
-                homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
-            }
-        }
-    }
-}
-
-func admin_handler(w http.ResponseWriter, r *http.Request) {
-    ctx := appengine.NewContext(r)
-    log.Infof(ctx,"%s","!!!!admin_handler<br/>Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
-
-    if r.URL.Path == "/-/cleanup_old_link_requests" {
-        query := datastore.NewQuery("linkrequest").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
-        keys, err := query.GetAll(ctx, nil)
-        if err != nil {
-            log.Errorf(ctx, "query error: %v", err)
-        } else {
-            err := datastore.DeleteMulti(ctx,keys)
-            if err != nil {
-                log.Errorf(ctx, "DeleteMulti error: %v, keys = %v", err,keys)
-            }
-        }
-    }
 }
