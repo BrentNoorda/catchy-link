@@ -19,6 +19,7 @@ func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest) {
     page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)
     page = strings.Replace(page,"{{shorturl_t}}",html.EscapeString(linkRequest.CatchyUrl),1)
     page = strings.Replace(page,"{{youremail}}",html.EscapeString(linkRequest.YourEmail),1)
+    page = strings.Replace(page,"{{myemail}}",sender_email_address,1)
     fmt.Fprint(w,page)
 }
 
@@ -120,7 +121,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     msg := &mail.Message{
         Sender:  sender_email_address,
         To:      []string{form.YourEmail},
-        Subject: "Email from CatchyLink",
+        Subject: "Verify URL on Catchy.Link",
         Body:    "Email from catchylink yes it is",
     }
     if err := mail.Send(ctx, msg); err != nil {
