@@ -14,14 +14,14 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
     parts := strings.Split(r.URL.Path,"/")
     if len(parts) < 5 {
         log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
-        homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
+        input_form_with_error_msg(w,"globalerror","Unrecognized URL",nil)
     } else {
         command := parts[2]
         dbid, err := strconv.ParseInt(parts[3],10,64)
         uniqueKey := parts[4]
         if err != nil {
             log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"\nerror: %v",r.URL.Path,err)
-            homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
+            input_form_with_error_msg(w,"globalerror","Unrecognized URL",nil)
         } else {
             if command == "doit"  ||  command == "cancel" {
 
@@ -32,16 +32,16 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
                 e := new(CatchyLinkRequest)
                 if err := datastore.Get(ctx, k, e); err != nil {
                     log.Errorf(ctx,"email_reponse_handler datastore.Get failed. URL.Path:%s, err:%v",r.URL.Path,err)
-                    homepage_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
+                    input_form_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
                 } else if e.UniqueKey != uniqueKey {
                     log.Errorf(ctx,"email_reponse_handler datastore.Get failed. URL.Path:%s, unique key did not match.",r.URL.Path)
-                    homepage_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
+                    input_form_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
                 } else {
-                    homepage(w)
+                    input_form(w)
                 }
             } else {
                 log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
-                homepage_with_error_msg(w,"globalerror","Unrecognized URL",nil)
+                input_form_with_error_msg(w,"globalerror","Unrecognized URL",nil)
             }
         }
     }

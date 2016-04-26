@@ -2,6 +2,7 @@ package catchylink
 
 import (
     "fmt"
+    "html"
     "time"
     "strings"
     "net/http"
@@ -10,6 +11,34 @@ import (
     "google.golang.org/appengine/mail"
     "google.golang.org/appengine/datastore"
 )
+
+
+func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest) {
+    var page string
+    page = strings.Replace(input_form_success_html,"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
+    page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)
+    page = strings.Replace(page,"{{shorturl_t}}",html.EscapeString(linkRequest.CatchyUrl),1)
+    page = strings.Replace(page,"{{youremail}}",html.EscapeString(linkRequest.YourEmail),1)
+    fmt.Fprint(w,page)
+}
+
+func input_form(w http.ResponseWriter) {
+    fmt.Fprint(w,input_form_html)
+}
+
+func input_form_with_error_msg(w http.ResponseWriter,fieldname string,errormsg string,form *FormInput) {
+    var page string
+    page = strings.Replace(input_form_html,"{{"+fieldname+"-style}}","display:inline;",1)
+    page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
+
+    if form != nil {
+        page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.LongUrl) + "\"",1)
+        page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.CatchyUrl) + "\"",1)
+        page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.YourEmail) + "\"",1)
+    }
+
+    fmt.Fprint(w,page)
+}
 
 func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     var errormsg string
@@ -24,46 +53,46 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     // VALIDATE THE INPUT
     if errormsg = errormsg_if_blank(form.LongUrl,"Long URL"); errormsg!="" {
-        homepage_with_error_msg(w,"longurl",errormsg,&form)
+        input_form_with_error_msg(w,"longurl",errormsg,&form)
         return
     }
     if errormsg = errormsg_if_blank(form.CatchyUrl,"Catchy URL"); errormsg!="" {
-        homepage_with_error_msg(w,"catchyurl",errormsg,&form)
+        input_form_with_error_msg(w,"catchyurl",errormsg,&form)
         return
     }
     if errormsg = errormsg_if_blank(form.YourEmail,"Your Email"); errormsg!="" {
-        homepage_with_error_msg(w,"youremail",errormsg,&form)
+        input_form_with_error_msg(w,"youremail",errormsg,&form)
         return
     }
     if strings.ContainsAny(form.LongUrl," \t\r\n") {
-        homepage_with_error_msg(w,"longurl","Long URL cannot contain space characters",&form)
+        input_form_with_error_msg(w,"longurl","Long URL cannot contain space characters",&form)
         return
     }
     if strings.ContainsAny(form.CatchyUrl," \t\r\n") {
-        homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain space characters",&form)
+        input_form_with_error_msg(w,"catchyurl","Catchy URL cannot contain space characters",&form)
         return
     }
     if strings.ContainsAny(form.CatchyUrl,"+%") {
-        homepage_with_error_msg(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"",&form)
+        input_form_with_error_msg(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"",&form)
         return
     }
     if 250 < len(form.LongUrl) {
-        homepage_with_error_msg(w,"longurl","Long URL is too long (keep it under 250)",&form)
+        input_form_with_error_msg(w,"longurl","Long URL is too long (keep it under 250)",&form)
         return
     }
     if 250 < len(lowerCatchyUrl) {
-        homepage_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",&form)
+        input_form_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",&form)
         return
     }
     if 250 < len(form.YourEmail) {
-        homepage_with_error_msg(w,"youremail","Your Email is too long (keep it under 250)",&form)
+        input_form_with_error_msg(w,"youremail","Your Email is too long (keep it under 250)",&form)
         return
     }
 
     // check that it's not one of our few disallowed files
     for _, each := range disallowed_roots {
         if strings.HasPrefix(lowerCatchyUrl,each) {
-            homepage_with_error_msg(w,"catchyurl","Cathy URL cannot begin with \"" + each + "\"",&form)
+            input_form_with_error_msg(w,"catchyurl","Cathy URL cannot begin with \"" + each + "\"",&form)
             return
         }
     }
@@ -98,5 +127,5 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         log.Errorf(ctx, "Couldn't send email: %v", err)
     }
 
-    homepage(w)
+    input_form_success(w,linkRequest)
 }

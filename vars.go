@@ -26,4 +26,5 @@ type FormInput struct {
     LongUrl, CatchyUrl, YourEmail string
 }
 
-var index_html string
+var input_form_html string
+var input_form_success_html string

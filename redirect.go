@@ -14,7 +14,7 @@ func redirect_handler(w http.ResponseWriter, r *http.Request) {
         if r.Method == "POST" {
             post_new_catchy_link(w,r)
         } else {
-            homepage(w)
+            input_form(w)
         }
     } else {
         fmt.Fprint(w, "Catchylink3, world!<br/>Path:" + r.URL.Path + "<br/>RawPath:" + r.URL.RawPath + "<br/>RawQuery:" + r.URL.RawQuery)

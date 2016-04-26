@@ -44,7 +44,8 @@ func init() {
     rand.Seed(time.Now().UnixNano())
 
     // read index.html only once, so we don't read it again and again and again
-    index_html = read_min_web_file("index.html")
+    input_form_html = read_min_web_file("input_form.html")
+    input_form_success_html = read_min_web_file("input_form_success.html")
 
     http.HandleFunc("/robots.txt", robots_txt_handler)
     http.HandleFunc("/-/", admin_handler)
