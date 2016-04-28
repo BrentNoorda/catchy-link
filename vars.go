@@ -18,12 +18,19 @@ var disallowed_roots = [...]string {
 
 type CatchyLinkRequest struct {
     UniqueKey string
-    LongUrl, CatchyUrl, YourEmail string
+    LongUrl, CatchyUrl, Email string
     Expire   int64
 }
 
 type FormInput struct {
-    LongUrl, CatchyUrl, YourEmail string
+    LongUrl, CatchyUrl, LCatchyUrl, Email string
+}
+
+type CatchyLinkRedirect struct {
+    LCatchyUrl string   // this is the key for this database
+    LongUrl, CatchyUrl, LEmail string
+    Expire   int64
+    Duration int16  // original duration in days
 }
 
 var input_form_html string

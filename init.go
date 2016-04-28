@@ -47,6 +47,8 @@ func init() {
     input_form_html = read_min_web_file("input_form.html")
     input_form_success_html = read_min_web_file("input_form_success.html")
 
+    //http.HandleFunc("/AxonActionPotential", redirect_AxonActionPotential)
+    http.HandleFunc("/AxonActionPotential/", redirect_AxonActionPotential)
     http.HandleFunc("/robots.txt", robots_txt_handler)
     http.HandleFunc("/-/", admin_handler)
     http.HandleFunc("/~/", email_response_handler)

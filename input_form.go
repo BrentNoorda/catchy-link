@@ -6,6 +6,7 @@ import (
     "time"
     "strings"
     "net/http"
+    "golang.org/x/net/context"
     "google.golang.org/appengine"
     "google.golang.org/appengine/log"
     "google.golang.org/appengine/mail"
@@ -18,7 +19,7 @@ func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest) {
     page = strings.Replace(input_form_success_html,"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
     page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)
     page = strings.Replace(page,"{{shorturl_t}}",html.EscapeString(linkRequest.CatchyUrl),1)
-    page = strings.Replace(page,"{{youremail}}",html.EscapeString(linkRequest.YourEmail),1)
+    page = strings.Replace(page,"{{youremail}}",html.EscapeString(linkRequest.Email),1)
     page = strings.Replace(page,"{{myemail}}",sender_email_address,1)
     fmt.Fprint(w,page)
 }
@@ -35,10 +36,36 @@ func input_form_with_error_msg(w http.ResponseWriter,fieldname string,errormsg s
     if form != nil {
         page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.LongUrl) + "\"",1)
         page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.CatchyUrl) + "\"",1)
-        page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.YourEmail) + "\"",1)
+        page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.Email) + "\"",1)
     }
 
     fmt.Fprint(w,page)
+}
+
+func does_this_catchy_url_belong_to_someone_else(ctx context.Context, lCatchyUrl, lemail string, now time.Time) bool {
+    var err error
+    var key *datastore.Key
+    var redirect CatchyLinkRedirect
+
+    log.Infof(ctx,"------------------- does_this_catchy_url_belong_to_someone_else --------")
+    key = datastore.NewKey(ctx,"redirect",lCatchyUrl,0,nil)
+    if err = datastore.Get(ctx, key, redirect); err != nil {
+        // there is no existing record
+        log.Infof(ctx,"FALSE: because err != nil; = err = %v",err)
+        return false
+    } else if ( redirect.Expire <= now.Unix() ) {
+        // the existing record has expired
+        log.Infof(ctx,"FALSE: because existing record has expired")
+        return false
+    } else if ( redirect.LEmail == lemail ) {
+        // existing record belongs to this user
+        log.Infof(ctx,"FALSE: because existing record belongs to this email address")
+        return false
+    } else {
+        // record is valid, has not timed out, and belongs to another user
+        log.Infof(ctx,"TRUE: because existing valid record belongs to someone else")
+        return true
+    }
 }
 
 func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
@@ -49,8 +76,12 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     var form FormInput
     form.LongUrl = strings.TrimSpace(r.PostFormValue("longurl"))
     form.CatchyUrl = strings.TrimSpace(r.PostFormValue("catchyurl"))
-    form.YourEmail = strings.TrimSpace(r.PostFormValue("youremail"))
-    lowerCatchyUrl := strings.ToLower(form.CatchyUrl)
+    form.Email = strings.TrimSpace(r.PostFormValue("youremail"))
+
+    // remove / from the end of the CatchyUrl (they cause problems)
+    form.CatchyUrl = strings.TrimRight(form.CatchyUrl,"/ ")
+
+    form.LCatchyUrl = strings.ToLower(form.CatchyUrl)
 
     // VALIDATE THE INPUT
     if errormsg = errormsg_if_blank(form.LongUrl,"Long URL"); errormsg!="" {
@@ -61,7 +92,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         input_form_with_error_msg(w,"catchyurl",errormsg,&form)
         return
     }
-    if errormsg = errormsg_if_blank(form.YourEmail,"Your Email"); errormsg!="" {
+    if errormsg = errormsg_if_blank(form.Email,"Your Email"); errormsg!="" {
         input_form_with_error_msg(w,"youremail",errormsg,&form)
         return
     }
@@ -77,34 +108,42 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         input_form_with_error_msg(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"",&form)
         return
     }
-    if 250 < len(form.LongUrl) {
-        input_form_with_error_msg(w,"longurl","Long URL is too long (keep it under 250)",&form)
+    if 1000 < len(form.LongUrl) {
+        input_form_with_error_msg(w,"longurl","Long URL is too long (keep it under 1000)",&form)
         return
     }
-    if 250 < len(lowerCatchyUrl) {
+    if 250 < len(form.LCatchyUrl) {
         input_form_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",&form)
         return
     }
-    if 250 < len(form.YourEmail) {
-        input_form_with_error_msg(w,"youremail","Your Email is too long (keep it under 250)",&form)
+    if 150 < len(form.Email) {
+        input_form_with_error_msg(w,"youremail","Your Email is too long (keep it under 150)",&form)
         return
     }
 
     // check that it's not one of our few disallowed files
     for _, each := range disallowed_roots {
-        if strings.HasPrefix(lowerCatchyUrl,each) {
+        if strings.HasPrefix(form.LCatchyUrl,each) {
             input_form_with_error_msg(w,"catchyurl","Cathy URL cannot begin with \"" + each + "\"",&form)
             return
         }
     }
 
+    now := time.Now()
+
+    // check that this record doesn't already exist in the DB
+    if does_this_catchy_url_belong_to_someone_else(ctx,form.LCatchyUrl,strings.ToLower(form.Email),now) {
+        input_form_with_error_msg(w,"catchyurl","This catchy.link value was already taken by someone else. Sorry.",&form)
+        return
+    }
+
     // create CatchyLinkRequest and inform user about it
-    expire := time.Now().Add( time.Duration(RequestTimeMin*60*1000*1000*1000) )
+    expire := now.Add( time.Duration(RequestTimeMin*60*1000*1000*1000) )
     linkRequest := CatchyLinkRequest {
         UniqueKey: random_string(55),
         LongUrl: form.LongUrl,
         CatchyUrl: form.CatchyUrl,
-        YourEmail: form.YourEmail,
+        Email: form.Email,
         Expire: expire.Unix(),
     }
     key, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
@@ -120,7 +159,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     // send email to user
     msg := &mail.Message{
         Sender:  sender_email_address,
-        To:      []string{form.YourEmail},
+        To:      []string{form.Email},
         Subject: "Verify URL on Catchy.Link",
         Body:    "Email from catchylink yes it is",
     }
