@@ -48,8 +48,6 @@ func init() {
     input_form_success_html = read_min_web_file("input_form_success.html")
     email_doit_success_html = read_min_web_file("email_doit_success.html")
 
-    //http.HandleFunc("/AxonActionPotential", redirect_AxonActionPotential)
-    http.HandleFunc("/AxonActionPotential/", redirect_AxonActionPotential)
     http.HandleFunc("/robots.txt", robots_txt_handler)
     http.HandleFunc("/favicon.ico", favicon_ico_handler)
     http.HandleFunc("/-/", admin_handler)

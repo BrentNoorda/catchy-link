@@ -20,12 +20,6 @@ func redirect_to_url(w http.ResponseWriter, r *http.Request,url string) {
 }
 
 
-func redirect_AxonActionPotential(w http.ResponseWriter, r *http.Request) {
-    ctx := appengine.NewContext(r)
-    log.Infof(ctx,"----------------- redirect_AxonActionPotential -----------------")
-    redirect_to_url(w,r,"http://www.brent-noorda.com/medical/physiologylab/axon/index.html");
-}
-
 func redirect_handler(w http.ResponseWriter, r *http.Request) {
     ctx := appengine.NewContext(r)
     log.Infof(ctx,"%s","Catchylink3, world!Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
