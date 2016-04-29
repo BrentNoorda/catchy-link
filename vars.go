@@ -24,7 +24,7 @@ type CatchyLinkRequest struct {
 }
 
 type FormInput struct {
-    LongUrl, CatchyUrl, LCatchyUrl, Email string
+    LongUrl, CatchyUrl, LCatchyUrl, Email, Duration string
 }
 
 type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl

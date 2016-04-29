@@ -18,6 +18,10 @@ func email_doit_success(w http.ResponseWriter,linkRequest CatchyLinkRequest) {
     page = strings.Replace(page,"{{shorturl_t}}",html.EscapeString(linkRequest.CatchyUrl),1)
     page = strings.Replace(page,"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
     page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)
+    page = strings.Replace(page,"{{duration}}",duration_to_string(linkRequest.Duration),1)
+    if linkRequest.Duration == 1 {
+        page = strings.Replace(page,"{{reminder}}","style=\"display:none;\"",1)
+    }
     fmt.Fprint(w,page)
 }
 

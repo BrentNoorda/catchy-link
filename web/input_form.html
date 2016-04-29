@@ -39,6 +39,9 @@
         font-weight: bold;
         display: none;
       }
+      button {
+        background-color: #eeeeee;
+      }
     </style>
 </head>
 <body>
@@ -76,6 +79,20 @@
       </tr>
       <tr>
         <td align="right">
+          <label for="duration">Duration</label>
+        </td>
+        <td colspan="2">
+          <select name="duration">
+            <option value="1" {{selected-1}}>1 day</option>
+            <option value="7" {{selected-7}} selected="selected">1 week</option>
+            <option value="31" {{selected-31}}>1 month</option>
+            <option value="365" {{selected-365}}>1 year</option>
+          </select>
+          <span style="opacity:0.5;">you will be emailed a renew option for any duration longer than 1 day</span>
+        </td>
+      </tr>
+      <tr>
+        <td align="right">
           <label for="youremail">Your Email</label>
         </td>
         <td colspan="2">
@@ -88,7 +105,7 @@
           &nbsp;
         </td>
         <td colspan="2">
-          <button type="submit" style="background-color:#dddddd;">create catchy.link</button>
+          <button type="submit">create catchy.link</button>
         </td>
       </tr>
     </table>

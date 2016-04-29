@@ -21,6 +21,11 @@
         padding-left:0.5em;
         padding-top:0.5em;
       }
+      button {
+        background-color: #eeeeee;
+        margin: auto;
+        display: block;
+      }
     </style>
 </head>
 <body>
@@ -42,7 +47,7 @@
           <a href="{{longurl_a}}" style="margin-left:2em;">{{longurl_t}}</a><br/><br/>
           An email has been sent to &quot;<b>{{youremail}}</b>&quot; to verify this request. The final link will not be
           valid until you respond to that email. So go check for an email from &quot;{{myemail}}&quot;<br/><br/><br/>
-          <button onclick="location.href='/'" style="margin:auto;display:block;background-color:#dddddd;">create another catchy.link</button>
+          <a href="/" style="text-decoration:none;"><button type="button">create another catchy.link</button></a>
         </td>
       </tr>
     </table>

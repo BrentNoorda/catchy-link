@@ -5,6 +5,7 @@ import (
     "html"
     "time"
     "strings"
+    "strconv"
     "net/http"
     "golang.org/x/net/context"
     "google.golang.org/appengine"
@@ -61,6 +62,9 @@ func input_form_with_error_msg(w http.ResponseWriter,fieldname string,errormsg s
     page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
 
     if form != nil {
+        page = strings.Replace(page,"selected=\"selected\"","",1)
+        page = strings.Replace(page,"{{selected-" + form.Duration + "}}","selected=\"selected\"",1)
+
         page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.LongUrl) + "\"",1)
         page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.CatchyUrl) + "\"",1)
         page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.Email) + "\"",1)
@@ -104,6 +108,10 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     form.LongUrl = strings.TrimSpace(r.PostFormValue("longurl"))
     form.CatchyUrl = strings.TrimSpace(r.PostFormValue("catchyurl"))
     form.Email = strings.TrimSpace(r.PostFormValue("youremail"))
+    form.Duration = r.PostFormValue("duration")
+    if form.Duration != "1" && form.Duration != "7" && form.Duration != "31" && form.Duration != "365" {
+        form.Duration = "7"
+    }
 
     // remove / from the end of the CatchyUrl (they cause problems)
     form.CatchyUrl = strings.TrimRight(form.CatchyUrl,"/ \n\r\t")
@@ -170,13 +178,14 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     // create CatchyLinkRequest and inform user about it
     expire := now.Add( time.Duration(RequestTimeMin*60*1000*1000*1000) )
+    duration,_ := strconv.Atoi(form.Duration)
     linkRequest := CatchyLinkRequest {
         UniqueKey: random_string(55),
         LongUrl: form.LongUrl,
         CatchyUrl: form.CatchyUrl,
         Email: form.Email,
         Expire: expire.Unix(),
-        Duration: 31,   // TODO get duration time from form
+        Duration: int16(duration),
     }
     key, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
     if err != nil {

@@ -21,6 +21,11 @@
         padding-left:0.5em;
         padding-top:0.5em;
       }
+      button {
+        background-color: #eeeeee;
+        margin: auto;
+        display: block;
+      }
     </style>
 </head>
 <body>
@@ -36,10 +41,13 @@
       </tr>
       <tr>
         <td colspan="2">
+          Congratulations.<br/><br/>
           <a href="http://catchy.link/{{shorturl_a}}" style="margin-left:2em;">http://catchy.link/{{shorturl_t}}</a><br/><br/>
           now points to:<br/><br/>
           <a href="{{longurl_a}}" style="margin-left:2em;">{{longurl_t}}</a><br/><br/>
-          <button onclick="location.href='/'" style="margin:auto;display:block;background-color:#dddddd;">create another catchy.link</button>
+          This link will be valid for about {{duration}}. You can alter this catchy.link at any time using this same email address.
+          <span {{reminder}}>You will be emailed a reminder a day or two before this expires, in case you want to renew the URL.</span>
+          <br/><br/><a href="/" style="text-decoration:none;"><button type="button">create another catchy.link</button></a>
         </td>
       </tr>
     </table>
