@@ -30,3 +30,7 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
 func robots_txt_handler(w http.ResponseWriter, r *http.Request) {
     fmt.Fprint(w, "user-agent: *\r\nAllow: /$\r\nDisallow: /\r\n")
 }
+
+func favicon_ico_handler(w http.ResponseWriter, r *http.Request) {
+    redirect_to_url(w,r,"https://googledrive.com/host/0B4rxOB63nnDMdE10cnlDWGxDSUU")
+}

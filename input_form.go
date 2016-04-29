@@ -76,15 +76,15 @@ func does_this_catchy_url_belong_to_someone_else(ctx context.Context, lCatchyUrl
 
     log.Infof(ctx,"------------------- does_this_catchy_url_belong_to_someone_else --------")
     key = datastore.NewKey(ctx,"redirect",lCatchyUrl,0,nil)
-    if err = datastore.Get(ctx, key, redirect); err != nil {
+    if err = datastore.Get(ctx, key, &redirect); err != nil {
         // there is no existing record
-        log.Infof(ctx,"FALSE: because err != nil; = err = %v",err)
+        log.Infof(ctx,"FALSE: because err != nil; err = %v for entity key %v",err,key)
         return false
     } else if ( redirect.Expire <= now.Unix() ) {
         // the existing record has expired
         log.Infof(ctx,"FALSE: because existing record has expired")
         return false
-    } else if ( redirect.LEmail == lemail ) {
+    } else if ( strings.ToLower(redirect.Email) == lemail ) {
         // existing record belongs to this user
         log.Infof(ctx,"FALSE: because existing record belongs to this email address")
         return false
@@ -106,7 +106,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     form.Email = strings.TrimSpace(r.PostFormValue("youremail"))
 
     // remove / from the end of the CatchyUrl (they cause problems)
-    form.CatchyUrl = strings.TrimRight(form.CatchyUrl,"/ ")
+    form.CatchyUrl = strings.TrimRight(form.CatchyUrl,"/ \n\r\t")
 
     form.LCatchyUrl = strings.ToLower(form.CatchyUrl)
 
@@ -131,6 +131,10 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         input_form_with_error_msg(w,"catchyurl","Catchy URL cannot contain space characters",&form)
         return
     }
+    if strings.ContainsAny(form.CatchyUrl,"#") {
+        input_form_with_error_msg(w,"catchyurl","Catchy URL cannot contain the character \"#\"",&form)
+        return
+    }
     if strings.ContainsAny(form.CatchyUrl,"+%") {
         input_form_with_error_msg(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"",&form)
         return
@@ -151,7 +155,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     // check that it's not one of our few disallowed files
     for _, each := range disallowed_roots {
         if strings.HasPrefix(form.LCatchyUrl,each) {
-            input_form_with_error_msg(w,"catchyurl","Cathy URL cannot begin with \"" + each + "\"",&form)
+            input_form_with_error_msg(w,"catchyurl","Catchy URL cannot begin with \"" + each + "\"",&form)
             return
         }
     }
@@ -172,6 +176,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         CatchyUrl: form.CatchyUrl,
         Email: form.Email,
         Expire: expire.Unix(),
+        Duration: 31,   // TODO get duration time from form
     }
     key, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
     if err != nil {

@@ -20,15 +20,15 @@ type CatchyLinkRequest struct {
     UniqueKey string
     LongUrl, CatchyUrl, Email string
     Expire   int64
+    Duration int16  // original duration in days
 }
 
 type FormInput struct {
     LongUrl, CatchyUrl, LCatchyUrl, Email string
 }
 
-type CatchyLinkRedirect struct {
-    LCatchyUrl string   // this is the key for this database
-    LongUrl, CatchyUrl, LEmail string
+type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
+    LongUrl, CatchyUrl, Email string
     Expire   int64
     Duration int16  // original duration in days
 }

@@ -51,6 +51,7 @@ func init() {
     //http.HandleFunc("/AxonActionPotential", redirect_AxonActionPotential)
     http.HandleFunc("/AxonActionPotential/", redirect_AxonActionPotential)
     http.HandleFunc("/robots.txt", robots_txt_handler)
+    http.HandleFunc("/favicon.ico", favicon_ico_handler)
     http.HandleFunc("/-/", admin_handler)
     http.HandleFunc("/~/", email_response_handler)
     http.HandleFunc("/", redirect_handler)

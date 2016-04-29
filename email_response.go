@@ -52,7 +52,33 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
                     log.Errorf(ctx,"email_reponse_handler expire has elapsed.",r.URL.Path)
                     input_form_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
                 } else {
-                    email_doit_success(w,*e)
+
+                    // create the redirect record (unless someone else created it first)
+                    var key *datastore.Key
+                    var redirect CatchyLinkRedirect
+                    var lCatchyUrl string
+
+                    lCatchyUrl = strings.ToLower(e.CatchyUrl)
+                    key = datastore.NewKey(ctx,"redirect",lCatchyUrl,0,nil)
+
+                    err = datastore.Get(ctx, key, &redirect)
+                    if err == nil  &&  strings.ToLower(redirect.Email) != strings.ToLower(e.Email) {
+                        input_form_with_error_msg(w,"globalerror","Looks like someone else already took that catchy.link. That was quick. Sorry.",nil)
+                    } else {
+                        redirect.LongUrl = e.LongUrl
+                        redirect.CatchyUrl = e.CatchyUrl
+                        redirect.Email = e.Email
+                        redirect.Duration = e.Duration
+                        redirect.Expire = time.Now().Unix() + (int64(redirect.Duration) * 60 * 24 * 24)
+
+                        _, err = datastore.Put(ctx,key,&redirect)
+                        if err != nil {
+                            log.Errorf(ctx,"Error %v putting catchyurl record %v",err,redirect)
+                            input_form_with_error_msg(w,"globalerror","Unknown error creating record. Sorry.",nil)
+                        } else {
+                            email_doit_success(w,*e)
+                        }
+                    }
                 }
             } else {
                 log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
