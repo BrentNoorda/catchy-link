@@ -27,7 +27,7 @@ func read_min_web_file(filespec string) string {
     var ret string
     bytes, err := ioutil.ReadFile("web/" + filespec)
     if err != nil {
-        fmt.Fprintf(os.Stderr,"YIKES!!!! Cannot read web/index.html");
+        fmt.Fprintf(os.Stderr,"YIKES!!!! Cannot read web/" + filespec);
         ret = ""
     } else {
         ret = string(bytes)
@@ -46,6 +46,7 @@ func init() {
     // read index.html only once, so we don't read it again and again and again
     input_form_html = read_min_web_file("input_form.html")
     input_form_success_html = read_min_web_file("input_form_success.html")
+    email_doit_success_html = read_min_web_file("email_doit_success.html")
 
     //http.HandleFunc("/AxonActionPotential", redirect_AxonActionPotential)
     http.HandleFunc("/AxonActionPotential/", redirect_AxonActionPotential)

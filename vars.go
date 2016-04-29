@@ -35,3 +35,4 @@ type CatchyLinkRedirect struct {
 
 var input_form_html string
 var input_form_success_html string
+var email_doit_success_html string

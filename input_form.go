@@ -44,7 +44,7 @@ func prepare_email_body(linkRequest CatchyLinkRequest, doitUrl string) (body,htm
                "to<br/><br/>\n" +
                " &nbsp; <a href=\"" + linkRequest.LongUrl + "\">" + linkRequest.LongUrl + "<a><br/><br/>\n" +
                "To VERIFY this url request, click on the following button:<br/><br/>\n" +
-               " &nbsp; <a href=\"" + doitUrl + "\"><button style=\"background-color:#dddddd;\"><font size=\"+1\">" + Create Link + "</font></button><a><br/><br/><br/>\n" +
+               " &nbsp; <a href=\"" + doitUrl + "\"><button style=\"background-color:#dddddd;\"><font size=\"+1\">create catchy.link</font></button><a><br/><br/><br/>\n" +
                "<font size=\"-2\">if that button fails, copy and paste this url into your browser: " + doitUrl + "</font>" +
                "</td></tr></table>"
 

@@ -1,6 +1,9 @@
 package catchylink
 
 import (
+    "fmt"
+    "html"
+    "time"
     "strings"
     "strconv"
     "net/http"
@@ -8,6 +11,15 @@ import (
     "google.golang.org/appengine/log"
     "google.golang.org/appengine/datastore"
 )
+
+func email_doit_success(w http.ResponseWriter,linkRequest CatchyLinkRequest) {
+    var page string
+    page = strings.Replace(email_doit_success_html,"{{shorturl_a}}",strings.Replace(linkRequest.CatchyUrl,"\"","&quot;",1),1)
+    page = strings.Replace(page,"{{shorturl_t}}",html.EscapeString(linkRequest.CatchyUrl),1)
+    page = strings.Replace(page,"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
+    page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)
+    fmt.Fprint(w,page)
+}
 
 func email_response_handler(w http.ResponseWriter, r *http.Request) {
     ctx := appengine.NewContext(r)
@@ -34,10 +46,13 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
                     log.Errorf(ctx,"email_reponse_handler datastore.Get failed. URL.Path:%s, err:%v",r.URL.Path,err)
                     input_form_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
                 } else if e.UniqueKey != uniqueKey {
-                    log.Errorf(ctx,"email_reponse_handler datastore.Get failed. URL.Path:%s, unique key did not match.",r.URL.Path)
+                    log.Errorf(ctx,"email_reponse_handler uniqueKey does not match.")
+                    input_form_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
+                } else if e.Expire <= time.Now().Unix() {
+                    log.Errorf(ctx,"email_reponse_handler expire has elapsed.",r.URL.Path)
                     input_form_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
                 } else {
-                    input_form(w)
+                    email_doit_success(w,*e)
                 }
             } else {
                 log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
