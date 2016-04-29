@@ -24,6 +24,33 @@ func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest) {
     fmt.Fprint(w,page)
 }
 
+func prepare_email_body(linkRequest CatchyLinkRequest, doitUrl string) (body,htmlBody string) {
+
+    var noUrlLink string
+
+    body = "You have requested a memorable URL to redirect:\n\n" +
+           "   http ://catchy.link/" + linkRequest.CatchyUrl + "\n\n" +
+           "to\n\n" +
+           "   " + linkRequest.LongUrl + "\n\n\n" +
+           "To VERIFY this url request, click on the following link:\n\n" +
+           "   VERIFY: " + doitUrl + "\n"
+
+    noUrlLink = strings.Replace(linkRequest.CatchyUrl,"/","<font>/</font>",-1)
+    noUrlLink = strings.Replace(noUrlLink,".","<font>.</font>",-1)
+    htmlBody = "<table width=\"97%\" style=\"margin: auto;max-width:800px\" align=\"center\">\n" +
+               "<tr><td width=\"100%\">\n" +
+               "You have requested a memorable URL to redirect:<br/><br/>\n" +
+               " &nbsp; http<font>:</font>//catchy<font>.</font>link/" + noUrlLink + "<br/><br/>\n" +
+               "to<br/><br/>\n" +
+               " &nbsp; <a href=\"" + linkRequest.LongUrl + "\">" + linkRequest.LongUrl + "<a><br/><br/>\n" +
+               "To VERIFY this url request, click on the following button:<br/><br/>\n" +
+               " &nbsp; <a href=\"" + doitUrl + "\"><button style=\"background-color:#dddddd;\"><font size=\"+1\">" + Create Link + "</font></button><a><br/><br/><br/>\n" +
+               "<font size=\"-2\">if that button fails, copy and paste this url into your browser: " + doitUrl + "</font>" +
+               "</td></tr></table>"
+
+     return
+}
+
 func input_form(w http.ResponseWriter) {
     fmt.Fprint(w,input_form_html)
 }
@@ -133,7 +160,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     // check that this record doesn't already exist in the DB
     if does_this_catchy_url_belong_to_someone_else(ctx,form.LCatchyUrl,strings.ToLower(form.Email),now) {
-        input_form_with_error_msg(w,"catchyurl","This catchy.link value was already taken by someone else. Sorry.",&form)
+        input_form_with_error_msg(w,"catchyurl","This catchy.link was already taken by someone else. Sorry.",&form)
         return
     }
 
@@ -148,20 +175,27 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     }
     key, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
     if err != nil {
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-            return
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
     }
 
     doitUrl := fmt.Sprintf("%s/~/doit/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
-    cancelUrl := fmt.Sprintf("%s/~/cancel/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
-    log.Infof(ctx,"\n\n\ndoitUrl = %s\n\ncancelUrl = %s\n\n  ",doitUrl,cancelUrl)
+    //cancelUrl := fmt.Sprintf("%s/~/cancel/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
+    body,htmlBody := prepare_email_body(linkRequest,doitUrl)
+    subject := "Verify URL on Catchy.Link"
+    log.Infof(ctx,"-------------------------------------------------------------")
+    log.Infof(ctx,"To: %s",form.Email)
+    log.Infof(ctx,"Subject: %s\n",subject)
+    log.Infof(ctx,"%s",body)
+    log.Infof(ctx,"-------------------------------------------------------------")
 
     // send email to user
     msg := &mail.Message{
         Sender:  sender_email_address,
         To:      []string{form.Email},
-        Subject: "Verify URL on Catchy.Link",
-        Body:    "Email from catchylink yes it is",
+        Subject: subject,
+        Body:    body,
+        HTMLBody:htmlBody,
     }
     if err := mail.Send(ctx, msg); err != nil {
         log.Errorf(ctx, "Couldn't send email: %v", err)
