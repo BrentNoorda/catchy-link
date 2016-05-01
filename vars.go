@@ -3,9 +3,8 @@ package catchylink
 import (
 )
 
-const myRootUrl = "http://catchy.link"
+var myRootUrl = "http://catchy.link"  // this overridden if "CATCHYLINK_ROOT_URL" environment variable
 const RequestTimeMin = 30       // requests will timeout in this many minutes
-const sender_email_address = "verify@catchy-link.appspotmail.com"
 
 var disallowed_roots = [...]string {
     "index.",
@@ -14,6 +13,7 @@ var disallowed_roots = [...]string {
     "_/",
     "~/",
     "-/",
+    "_ah/",
 }
 
 type CatchyLinkRequest struct {
@@ -36,3 +36,17 @@ type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
 var input_form_html string
 var input_form_success_html string
 var email_doit_success_html string
+
+///////// EMAIL /////////
+// use mailgun if Mailgun is not nil, else default to sender_email_address
+
+const sender_email_address_if_no_mailgun = "verify@catchy-link.appspotmail.com"
+
+type MailgunParams struct {
+    from string
+    domain_name string
+    secret_key string
+    public_key string
+}
+
+var Mailgun *MailgunParams  = nil

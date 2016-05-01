@@ -40,13 +40,29 @@ func read_min_web_file(filespec string) string {
 }
 
 func init() {
-
     rand.Seed(time.Now().UnixNano())
 
+    if os.Getenv("CATCHYLINK_ROOT_URL") != "" {
+        myRootUrl = os.Getenv("CATCHYLINK_ROOT_URL")
+    }
+
     // read index.html only once, so we don't read it again and again and again
-    input_form_html = read_min_web_file("input_form.html")
-    input_form_success_html = read_min_web_file("input_form_success.html")
-    email_doit_success_html = read_min_web_file("email_doit_success.html")
+    input_form_html = strings.Replace(read_min_web_file("input_form.html"),"{{catchylink_root_url}}",myRootUrl,-1)
+    input_form_success_html = strings.Replace(read_min_web_file("input_form_success.html"),"{{catchylink_root_url}}",myRootUrl,-1)
+    email_doit_success_html = strings.Replace(read_min_web_file("email_doit_success.html"),"{{catchylink_root_url}}",myRootUrl,-1)
+
+    // if Mailgun parameters are in the environment variables, read them now. Getting
+    // those paramaters is an annoying kludge seen in run.py or deploy.py and writing
+    // of some temp files from the /secret directory
+    Mailgun = &MailgunParams{
+        from: os.Getenv("MAILGUN_FROM"),
+        domain_name: os.Getenv("MAILGUN_DOMAIN_NAME"),
+        secret_key: os.Getenv("MAILGUN_SECRET_KEY"),
+        public_key: os.Getenv("MAILGUN_PUBLIC_KEY"),
+    }
+    if ( Mailgun.from=="" ||Mailgun.domain_name=="" || Mailgun.secret_key=="" || Mailgun.public_key=="" ) {
+        Mailgun = nil
+    }
 
     http.HandleFunc("/robots.txt", robots_txt_handler)
     http.HandleFunc("/favicon.ico", favicon_ico_handler)
