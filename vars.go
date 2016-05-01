@@ -3,7 +3,7 @@ package catchylink
 import (
 )
 
-const myRootUrl = "http://catchy.link"
+var myRootUrl = "http://catchy.link"  // this overridden if "CATCHYLINK_ROOT_URL" environment variable
 const RequestTimeMin = 30       // requests will timeout in this many minutes
 
 var disallowed_roots = [...]string {

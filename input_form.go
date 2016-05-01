@@ -32,18 +32,22 @@ func prepare_email_body(linkRequest CatchyLinkRequest, doitUrl string) (body,htm
     var noUrlLink string
 
     body = "You have requested a memorable URL to redirect:\n\n" +
-           "   http ://catchy.link/" + linkRequest.CatchyUrl + "\n\n" +
+           "   " + myRootUrl + "/" + linkRequest.CatchyUrl + "\n\n" +
            "to\n\n" +
            "   " + linkRequest.LongUrl + "\n\n\n" +
            "To VERIFY this url request, click on the following link:\n\n" +
            "   VERIFY: " + doitUrl + "\n"
 
-    noUrlLink = strings.Replace(linkRequest.CatchyUrl,"/","<font>/</font>",-1)
+    // make url disguised so email reader doens't automatically make it a link
+    noUrlLink = myRootUrl + "/" + linkRequest.CatchyUrl
+    noUrlLink = strings.Replace(noUrlLink,"/","<font>/</font>",-1)
     noUrlLink = strings.Replace(noUrlLink,".","<font>.</font>",-1)
+    noUrlLink = strings.Replace(noUrlLink,":","<font>:</font>",-1)
+
     htmlBody = "<table width=\"97%\" style=\"margin: auto;max-width:800px\" align=\"center\">\n" +
                "<tr><td width=\"100%\">\n" +
                "You have requested a memorable URL to redirect:<br/><br/>\n" +
-               " &nbsp; http<font>:</font>//catchy<font>.</font>link/" + noUrlLink + "<br/><br/>\n" +
+               " &nbsp; " + noUrlLink + "<br/><br/>\n" +
                "to<br/><br/>\n" +
                " &nbsp; <a href=\"" + linkRequest.LongUrl + "\">" + linkRequest.LongUrl + "<a><br/><br/>\n" +
                "To VERIFY this url request, click on the following button:<br/><br/>\n" +
