@@ -51,11 +51,12 @@ func init() {
     // those paramaters is an annoying kludge seen in run.py or deploy.py and writing
     // of some temp files from the /secret directory
     Mailgun = &MailgunParams{
+        from: os.Getenv("MAILGUN_FROM"),
         domain_name: os.Getenv("MAILGUN_DOMAIN_NAME"),
-        api_key: os.Getenv("MAILGUN_API_KEY"),
+        secret_key: os.Getenv("MAILGUN_SECRET_KEY"),
         public_key: os.Getenv("MAILGUN_PUBLIC_KEY"),
     }
-    if ( Mailgun.domain_name=="" || Mailgun.api_key=="" || Mailgun.public_key=="" ) {
+    if ( Mailgun.from=="" ||Mailgun.domain_name=="" || Mailgun.secret_key=="" || Mailgun.public_key=="" ) {
         Mailgun = nil
     }
 

@@ -5,7 +5,6 @@ import (
 
 const myRootUrl = "http://catchy.link"
 const RequestTimeMin = 30       // requests will timeout in this many minutes
-const sender_email_address = "verify@catchy-link.appspotmail.com"
 
 var disallowed_roots = [...]string {
     "index.",
@@ -44,8 +43,9 @@ var email_doit_success_html string
 const sender_email_address_if_no_mailgun = "verify@catchy-link.appspotmail.com"
 
 type MailgunParams struct {
+    from string
     domain_name string
-    api_key string
+    secret_key string
     public_key string
 }
 

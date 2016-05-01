@@ -12,10 +12,12 @@ import (
     "google.golang.org/appengine/log"
     "google.golang.org/appengine/mail"
     "google.golang.org/appengine/datastore"
+    "google.golang.org/appengine/urlfetch"
+    "github.com/mailgun/mailgun-go"     // of this is missing do# goapp get github.com/mailgun/mailgun-go
 )
 
 
-func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest) {
+func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest,sender_email_address string) {
     var page string
     page = strings.Replace(input_form_success_html,"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
     page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)
@@ -197,23 +199,57 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     //cancelUrl := fmt.Sprintf("%s/~/cancel/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
     body,htmlBody := prepare_email_body(linkRequest,doitUrl)
     subject := "Verify URL on Catchy.Link"
+
     log.Infof(ctx,"-------------------------------------------------------------")
     log.Infof(ctx,"To: %s",form.Email)
     log.Infof(ctx,"Subject: %s\n",subject)
     log.Infof(ctx,"%s",body)
     log.Infof(ctx,"-------------------------------------------------------------")
 
-    // send email to user
-    msg := &mail.Message{
-        Sender:  sender_email_address,
-        To:      []string{form.Email},
-        Subject: subject,
-        Body:    body,
-        HTMLBody:htmlBody,
-    }
-    if err := mail.Send(ctx, msg); err != nil {
-        log.Errorf(ctx, "Couldn't send email: %v", err)
+    var sender_email_address string
+    if Mailgun != nil {
+        // send email message through mailgun
+        httpc := urlfetch.Client(ctx)
+
+        mg := mailgun.NewMailgun(
+            Mailgun.domain_name,
+            Mailgun.secret_key,
+            Mailgun.public_key,
+        )
+        mg.SetClient(httpc)
+
+        sender_email_address = Mailgun.from
+        message := mg.NewMessage(
+             /* From */ Mailgun.from,
+             /* Subject */ subject,
+             /* Body */ body,
+             /* To */ form.Email,
+        )
+        message.SetHtml(htmlBody)
+
+        _, _, err := mg.Send(message)
+        if err != nil {
+            log.Errorf(ctx, "Could not send email from Mailgun: %v", err)
+            input_form_with_error_msg(w,"globalerror","Unspecified error sending email to that address. Sorry.",nil)
+            return
+        }
+
+    } else {
+        // send email message through app engine
+        sender_email_address = sender_email_address_if_no_mailgun
+        msg := &mail.Message{
+            Sender:  sender_email_address_if_no_mailgun,
+            To:      []string{form.Email},
+            Subject: subject,
+            Body:    body,
+            HTMLBody:htmlBody,
+        }
+        if err := mail.Send(ctx, msg); err != nil {
+            log.Errorf(ctx, "Could not send email: %v", err)
+            input_form_with_error_msg(w,"globalerror","Unspecified error sending email to that address. Sorry.",nil)
+            return
+        }
     }
 
-    input_form_success(w,linkRequest)
+    input_form_success(w,linkRequest,sender_email_address)
 }
