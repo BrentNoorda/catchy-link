@@ -40,13 +40,24 @@ func read_min_web_file(filespec string) string {
 }
 
 func init() {
-
     rand.Seed(time.Now().UnixNano())
 
     // read index.html only once, so we don't read it again and again and again
     input_form_html = read_min_web_file("input_form.html")
     input_form_success_html = read_min_web_file("input_form_success.html")
     email_doit_success_html = read_min_web_file("email_doit_success.html")
+
+    // if Mailgun parameters are in the environment variables, read them now. Getting
+    // those paramaters is an annoying kludge seen in run.py or deploy.py and writing
+    // of some temp files from the /secret directory
+    Mailgun = &MailgunParams{
+        domain_name: os.Getenv("MAILGUN_DOMAIN_NAME"),
+        api_key: os.Getenv("MAILGUN_API_KEY"),
+        public_key: os.Getenv("MAILGUN_PUBLIC_KEY"),
+    }
+    if ( Mailgun.domain_name=="" || Mailgun.api_key=="" || Mailgun.public_key=="" ) {
+        Mailgun = nil
+    }
 
     http.HandleFunc("/robots.txt", robots_txt_handler)
     http.HandleFunc("/favicon.ico", favicon_ico_handler)
