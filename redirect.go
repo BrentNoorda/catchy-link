@@ -1,6 +1,7 @@
 package catchylink
 
 import (
+    "time"
     "strings"
     "net/http"
     "google.golang.org/appengine"
@@ -68,10 +69,14 @@ func redirect_handler(w http.ResponseWriter, r *http.Request) {
                     // there is no existing record
                     input_form_with_error_msg(w,"globalerror","Unrecognized catchy.link URL",nil)
                 } else {
+                    // don't check here for expiration time, because the periodic cleaner will remove stuff at least once
+                    // per day, and if something is returned for up to a day too long then who cares...
+
                     // store in memcache so we find it more quickly next time
                     item = &memcache.Item{
                         Key: lCatchyUrl,
                         Value: []byte(redirect.LongUrl),
+                        Expiration: time.Unix(redirect.Expire,0).Sub(time.Now()),
                     }
                     if err = memcache.Set(ctx, item); err != nil {
                         log.Errorf(ctx,"Error setting memcache for \"%s\", err = %v",lCatchyUrl,err)
