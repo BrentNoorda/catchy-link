@@ -9,6 +9,7 @@ import (
     "net/http"
     "google.golang.org/appengine"
     "google.golang.org/appengine/log"
+    "google.golang.org/appengine/memcache"
     "google.golang.org/appengine/datastore"
 )
 
@@ -76,6 +77,10 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
                         redirect.Expire = time.Now().Unix() + (int64(redirect.Duration) * 60 * 24 * 24)
 
                         _, err = datastore.Put(ctx,key,&redirect)
+
+                        // delete the key from memcache (in case it's there) because it is probably no longer valid
+                        memcache.Delete(ctx,lCatchyUrl)
+
                         if err != nil {
                             log.Errorf(ctx,"Error %v putting catchyurl record %v",err,redirect)
                             input_form_with_error_msg(w,"globalerror","Unknown error creating record. Sorry.",nil)

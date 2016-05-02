@@ -5,6 +5,7 @@ import (
     "net/http"
     "google.golang.org/appengine"
     "google.golang.org/appengine/log"
+    "google.golang.org/appengine/memcache"
     "google.golang.org/appengine/datastore"
 )
 
@@ -21,8 +22,6 @@ func redirect_to_url(w http.ResponseWriter, r *http.Request,url string) {
 
 
 func redirect_handler(w http.ResponseWriter, r *http.Request) {
-    ctx := appengine.NewContext(r)
-    log.Infof(ctx,"%s","Catchylink3, world!Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
     if r.URL.Path == "/" {
         if r.Method == "POST" {
             post_new_catchy_link(w,r)
@@ -30,10 +29,13 @@ func redirect_handler(w http.ResponseWriter, r *http.Request) {
             input_form(w)
         }
     } else {
-        log.Infof(ctx, "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
-        log.Infof(ctx, "\nPath: %s\nRawPath: %s\nRawQuery: %s",r.URL.RawQuery,r.URL.Path,r.URL.RawPath,r.URL.RawQuery)
-        log.Infof(ctx, "\nRequestURI: %s\n",r.RequestURI)
-        log.Infof(ctx, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+
+        ctx := appengine.NewContext(r)
+
+        //log.Infof(ctx, "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
+        //log.Infof(ctx, "\nPath: %s\nRawPath: %s\nRawQuery: %s",r.URL.RawQuery,r.URL.Path,r.URL.RawPath,r.URL.RawQuery)
+        //log.Infof(ctx, "\nRequestURI: %s\n",r.RequestURI)
+        //log.Infof(ctx, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 
         // strip any slashes or spaces from beginning or end of this raw query string
         var lCatchyUrl string
@@ -43,17 +45,42 @@ func redirect_handler(w http.ResponseWriter, r *http.Request) {
             input_form(w)
         } else {
 
-            // find this catchyurl in the database
-            var key *datastore.Key
-            var redirect CatchyLinkRedirect
-            key = datastore.NewKey(ctx,"redirect",lCatchyUrl,0,nil)
-            log.Infof(ctx,"key from %s = %v",lCatchyUrl,key)
-            if datastore.Get(ctx, key, &redirect) != nil {
-                // there is no existing record
-                input_form_with_error_msg(w,"globalerror","Unrecognized catchy.link URL",nil)
+            // TODO: look into memcahce Expiration
+
+            var err error
+            var item *memcache.Item
+
+            // look first in memcache
+            if item, err = memcache.Get(ctx,lCatchyUrl); err == nil {
+                //log.Infof(ctx,"url \"%s\" FOUND in memcache",lCatchyUrl);
+                redirect_to_url(w,r,string(item.Value))
+
             } else {
-                redirect_to_url(w,r,redirect.LongUrl)
+
+                //log.Infof(ctx,"url \"%s\" not found in memcache; err = %v",lCatchyUrl,err);
+
+                // find this catchyurl in the database
+                var key *datastore.Key
+                var redirect CatchyLinkRedirect
+                key = datastore.NewKey(ctx,"redirect",lCatchyUrl,0,nil)
+                //log.Infof(ctx,"key from %s = %v",lCatchyUrl,key)
+                if datastore.Get(ctx, key, &redirect) != nil {
+                    // there is no existing record
+                    input_form_with_error_msg(w,"globalerror","Unrecognized catchy.link URL",nil)
+                } else {
+                    // store in memcache so we find it more quickly next time
+                    item = &memcache.Item{
+                        Key: lCatchyUrl,
+                        Value: []byte(redirect.LongUrl),
+                    }
+                    if err = memcache.Set(ctx, item); err != nil {
+                        log.Errorf(ctx,"Error setting memcache for \"%s\", err = %v",lCatchyUrl,err)
+                    }
+
+                    redirect_to_url(w,r,redirect.LongUrl)
+                }
             }
+
         }
     }
 }
