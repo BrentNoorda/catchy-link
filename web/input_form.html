@@ -27,9 +27,17 @@
         border:none;
         align:left;
       }
+      table {
+        padding: 0 0.1em 0.5em 0.3em;
+        background-color: #e8eeee;
+        border-radius: 15px;
+      }
       td {
         padding-left:0.5em;
         padding-top:0.5em;
+      }
+      .input-cell {
+        padding-right: 0.6em;
       }
       input {
         width: 100%;
@@ -41,12 +49,13 @@
       }
       button {
         background-color: #eeeeee;
+        font-size: 100%;
       }
     </style>
 </head>
-<body>
+<body style="background-color:#f7f9f9;">
   <form action="/" method="post">
-    <table width="97%" style="margin: auto;max-width:800px" align="center">
+    <table width="97%" style="margin:auto;max-width:800px;" align="center">
       <tr>
         <td style="padding-left:0;">
           <h2>catchy.link</h2>
@@ -61,7 +70,7 @@
         <td align="right">
           <label for="longurl">Long URL</label>
         </td>
-        <td colspan="2">
+        <td colspan="2" class="input-cell">
           <input type="text" id="longurl" name="longurl" {{longurl-value}} />
           <span class="errormsg" style="{{longurl-style}}"><br/>{{longurl-errormsg}}</span>
         </td>
@@ -73,7 +82,7 @@
         <td width="5%">
           <span style="opacity:0.5;">{{catchylink_root_url}}/</span>
         </td>
-        <td width="90%" style="padding-left:0;">
+        <td width="90%" style="padding-left:0;" class="input-cell">
           <input type="text" id="catchyurl" name="catchyurl" {{catchyurl-value}} />
           <span class="errormsg" style="{{catchyurl-style}}"><br/>{{catchyurl-errormsg}}</span>
         </td>
@@ -96,7 +105,7 @@
         <td align="right">
           <label for="youremail">Your Email</label>
         </td>
-        <td colspan="2">
+        <td colspan="2" class="input-cell">
           <input type="text" id="youremail" name="youremail" {{youremail-value}} />
           <span class="errormsg" style="{{youremail-style}}"><br/>{{youremail-errormsg}}</span>
         </td>
@@ -111,11 +120,11 @@
       </tr>
     </table>
   </form>
-  <div style="margin: auto;max-width:800px">
+  <div style="margin:auto;max-width:800px;opacity:0.8;">
     <br/><hr/>
     For full details about catchy.link see this document:<br/><br/>
     <a href="https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing" style="margin-left:2em">https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing</a>
-    <br/><br/>or, if you want a more memorable (&quot;catchier&quot;) address:<br/><br/>
+    <br/><br/>or, if you want a more memorable (&#8220;catchier&#8221;) address:<br/><br/>
     <a href="http://catchy.link/CatchyLinkManual" style="margin-left:2em">catchy.link/CatchyLinkManual</a>
   </div>
 </body>
