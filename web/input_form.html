@@ -16,116 +16,81 @@
         ga('send', 'pageview');
       }
     </script>
-    <style media="screen" type="text/css">
-      h2, h3 {
-        margin-bottom: 0;
-      }
-      table, tr, td {
-        margin: 0;
-        padding: 0;
-        vertical-align: baseline;
-        border:none;
-        align:left;
-      }
-      table {
-        padding: 0 0.1em 0.5em 0.3em;
-        background-color: #e8eeee;
-        border-radius: 15px;
-      }
-      td {
-        padding-left:0.5em;
-        padding-top:0.5em;
-      }
-      .input-cell {
-        padding-right: 0.6em;
-      }
-      input {
-        width: 100%;
-      }
-      .errormsg {
-        color: red;
-        font-weight: bold;
-        display: none;
-      }
-      button {
-        background-color: #eeeeee;
-        font-size: 100%;
-      }
-    </style>
-</head>
-<body style="background-color:#f7f9f9;">
-  <form action="/" method="post">
-    <table width="97%" style="margin:auto;max-width:800px;" align="center">
-      <tr>
-        <td style="padding-left:0;">
-          <h2>catchy.link</h2>
-        </td>
-        <td colspan="2">
-          <h3>Turn a long internet url into something that is easy to remember
-              <span style="opacity:0.5;">(and temporary, and renewable, and owned and modifiable only by you)</span></h3>
-          <span class="errormsg" style="{{globalerror-style}};font-size:150%;">{{globalerror-errormsg}}</span>
-        </td>
-      </tr>
-      <tr>
-        <td align="right">
-          <label for="longurl">Long URL</label>
-        </td>
-        <td colspan="2" class="input-cell">
-          <input type="text" id="longurl" name="longurl" {{longurl-value}} />
-          <span class="errormsg" style="{{longurl-style}}"><br/>{{longurl-errormsg}}</span>
-        </td>
-      </tr>
-      <tr>
-        <td width="5%" align="right">
-          <label for="catchyurl">Catchy URL</label>
-        </td>
-        <td width="5%">
-          <span style="opacity:0.5;">{{catchylink_root_url}}/</span>
-        </td>
-        <td width="90%" style="padding-left:0;" class="input-cell">
-          <input type="text" id="catchyurl" name="catchyurl" {{catchyurl-value}} />
-          <span class="errormsg" style="{{catchyurl-style}}"><br/>{{catchyurl-errormsg}}</span>
-        </td>
-      </tr>
-      <tr>
-        <td align="right">
-          <label for="duration">Duration</label>
-        </td>
-        <td colspan="2">
-          <select name="duration">
-            <option value="1" {{selected-1}}>1 day</option>
-            <option value="7" {{selected-7}} selected="selected">1 week</option>
-            <option value="31" {{selected-31}}>1 month</option>
-            <option value="365" {{selected-365}}>1 year</option>
-          </select>
-          <span style="opacity:0.5;">you will be emailed a renew option for any duration longer than 1 day</span>
-        </td>
-      </tr>
-      <tr>
-        <td align="right">
-          <label for="youremail">Your Email</label>
-        </td>
-        <td colspan="2" class="input-cell">
-          <input type="text" id="youremail" name="youremail" {{youremail-value}} />
-          <span class="errormsg" style="{{youremail-style}}"><br/>{{youremail-errormsg}}</span>
-        </td>
-      </tr>
-      <tr>
-        <td>
-          &nbsp;
-        </td>
-        <td colspan="2">
-          <button type="submit">create catchy.link</button>
-        </td>
-      </tr>
-    </table>
-  </form>
-  <div style="margin:auto;max-width:800px;opacity:0.8;">
-    <br/><hr/>
-    For full details about catchy.link see this document:<br/><br/>
-    <a href="https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing" style="margin-left:2em">https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing</a>
-    <br/><br/>or, if you want a more memorable (&#8220;catchier&#8221;) address:<br/><br/>
-    <a href="http://catchy.link/CatchyLinkManual" style="margin-left:2em">catchy.link/CatchyLinkManual</a>
-  </div>
-</body>
+    <link rel="stylesheet" media="screen" type="text/css" href="catchylink.css">
+  </head>
+  <body>
+    <form action="/" method="post">
+      <table width="97%" class="middle-block" align="center">
+        <tr>
+          <td style="padding-left:0;">
+            <h2>catchy.link</h2>
+          </td>
+          <td colspan="2">
+            <h3>Turn a long internet url into something that is easy to remember
+                <span style="opacity:0.5;">(and temporary, and renewable, and owned and modifiable only by you)</span></h3>
+            <span class="errormsg" style="{{globalerror-style}};font-size:150%;">{{globalerror-errormsg}}</span>
+          </td>
+        </tr>
+        <tr>
+          <td align="right">
+            <label for="longurl">Long URL</label>
+          </td>
+          <td colspan="2" class="input-cell">
+            <input type="text" id="longurl" name="longurl" {{longurl-value}} />
+            <span class="errormsg" style="{{longurl-style}}"><br/>{{longurl-errormsg}}</span>
+          </td>
+        </tr>
+        <tr>
+          <td width="5%" align="right">
+            <label for="catchyurl">Catchy URL</label>
+          </td>
+          <td width="5%">
+            <span style="opacity:0.5;">{{catchylink_root_url}}/</span>
+          </td>
+          <td width="90%" style="padding-left:0;" class="input-cell">
+            <input type="text" id="catchyurl" name="catchyurl" {{catchyurl-value}} />
+            <span class="errormsg" style="{{catchyurl-style}}"><br/>{{catchyurl-errormsg}}</span>
+          </td>
+        </tr>
+        <tr>
+          <td align="right">
+            <label for="duration">Duration</label>
+          </td>
+          <td colspan="2">
+            <select name="duration">
+              <option value="1" {{selected-1}}>1 day</option>
+              <option value="7" {{selected-7}} selected="selected">1 week</option>
+              <option value="31" {{selected-31}}>1 month</option>
+              <option value="365" {{selected-365}}>1 year</option>
+            </select>
+            <span style="opacity:0.5;">you will be emailed a renew option for any duration longer than 1 day</span>
+          </td>
+        </tr>
+        <tr>
+          <td align="right">
+            <label for="youremail">Your Email</label>
+          </td>
+          <td colspan="2" class="input-cell">
+            <input type="text" id="youremail" name="youremail" {{youremail-value}} />
+            <span class="errormsg" style="{{youremail-style}}"><br/>{{youremail-errormsg}}</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            &nbsp;
+          </td>
+          <td colspan="2">
+            <button type="submit">create catchy.link</button>
+          </td>
+        </tr>
+      </table>
+    </form>
+    <div class="middle-block" style="opacity:0.8;">
+      <br/><hr/>
+      For full details about catchy.link see this document:<br/><br/>
+      <a href="https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing" style="margin-left:2em">https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing</a>
+      <br/><br/>or, if you want a more memorable (&#8220;catchier&#8221;) address:<br/><br/>
+      <a href="http://catchy.link/CatchyLinkManual" style="margin-left:2em">catchy.link/CatchyLinkManual</a>
+    </div>
+  </body>
 </html>

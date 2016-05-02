@@ -23,7 +23,7 @@ func replace_all_repeatedly(s, old, new string) string {
     return s
 }
 
-func read_min_web_file(filespec string) string {
+func read_min_web_file(filespec string,css string) string {
     var ret string
     bytes, err := ioutil.ReadFile("web/" + filespec)
     if err != nil {
@@ -35,6 +35,10 @@ func read_min_web_file(filespec string) string {
         ret = replace_all_repeatedly(ret,"  "," ")
         ret = strings.Replace(ret,"\n ","\n",-1)
         ret = strings.Replace(ret," \n","\n",-1)
+        if css != "" {
+            ret = strings.Replace(ret,"<link rel=\"stylesheet\" media=\"screen\" type=\"text/css\" href=\"catchylink.css\">",
+                                  "<style media=\"screen\" type=\"text/css\">\n"+css+"\n</style>",1)
+        }
     }
     return ret
 }
@@ -46,10 +50,14 @@ func init() {
         myRootUrl = os.Getenv("CATCHYLINK_ROOT_URL")
     }
 
+    // put css inline for all of those files
+    css := read_min_web_file("catchylink.css","")
+    css = strings.Replace(css,": ",":",-1)
+
     // read index.html only once, so we don't read it again and again and again
-    input_form_html = strings.Replace(read_min_web_file("input_form.html"),"{{catchylink_root_url}}",myRootUrl,-1)
-    input_form_success_html = strings.Replace(read_min_web_file("input_form_success.html"),"{{catchylink_root_url}}",myRootUrl,-1)
-    email_doit_success_html = strings.Replace(read_min_web_file("email_doit_success.html"),"{{catchylink_root_url}}",myRootUrl,-1)
+    input_form_html = strings.Replace(read_min_web_file("input_form.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
+    input_form_success_html = strings.Replace(read_min_web_file("input_form_success.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
+    email_doit_success_html = strings.Replace(read_min_web_file("email_doit_success.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
 
     // if Mailgun parameters are in the environment variables, read them now. Getting
     // those paramaters is an annoying kludge seen in run.py or deploy.py and writing

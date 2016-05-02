@@ -1,0 +1,45 @@
+body {
+    background-color: #f7f9f9;
+}
+.middle-block {
+    margin: auto;
+    max-width: 800px;
+}
+h2, h3 {
+    margin-bottom: 0;
+}
+table, tr, td {
+    margin: 0;
+    padding: 0;
+    vertical-align: baseline;
+    border:none;
+    align:left;
+}
+table {
+    padding: 0 0.1em 1.5em 0.3em;
+    background-color: #e8eeee;
+    border-radius: 15px;
+}
+td {
+    padding-left: 0.5em;
+    padding-top: 0.5em;
+}
+.input-cell {
+    padding-right: 0.6em;
+}
+input {
+    width: 100%;
+}
+.errormsg {
+    color: red;
+    font-weight: bold;
+    display: none;
+}
+button {
+    background-color: #eeeeee;
+    font-size: 100%;
+}
+.middle-button {
+    margin: auto;
+    display: block;
+}

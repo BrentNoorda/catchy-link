@@ -6,60 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="https://googledrive.com/host/0B4rxOB63nnDMdE10cnlDWGxDSUU"/>
     <title>catchy.link</title>
-    <style media="screen" type="text/css">
-      h2, h3 {
-        margin-bottom: 0;
-      }
-      table, tr, td {
-        margin: 0;
-        padding: 0;
-        vertical-align: baseline;
-        border:none;
-        align:left;
-      }
-      table {
-        padding: 0 0.1em 0.5em 0.3em;
-        background-color: #e8eeee;
-        border-radius: 15px;
-      }
-      td {
-        padding-left:0.5em;
-        padding-top:0.5em;
-      }
-      .input-cell {
-        padding-right: 0.6em;
-      }
-      button {
-        background-color: #eeeeee;
-        margin: auto;
-        display: block;
-        font-size: 100%;
-      }
-    </style>
-</head>
-<body style="background-color:#f7f9f9;">
-  <form action="/" method="post">
-    <table width="97%" style="margin: auto;max-width:800px" align="center">
-      <tr>
-        <td style="padding-left:0;" width="5%">
-          <h2>catchy.link</h2>
-        </td>
-        <td width="95%">
-          <h3>Turn a long internet url into something that is easy to remember.</h3>
-        </td>
-      </tr>
-      <tr>
-        <td colspan="2">
-          Congratulations.<br/><br/>
-          <a href="{{catchylink_root_url}}/{{shorturl_a}}" style="margin-left:2em;">{{catchylink_root_url}}/{{shorturl_t}}</a><br/><br/>
-          now points to:<br/><br/>
-          <a href="{{longurl_a}}" style="margin-left:2em;">{{longurl_t}}</a><br/><br/>
-          This link will be valid for about {{duration}}. You can alter this catchy.link at any time using this same email address.
-          <span {{reminder}}>You will be emailed a reminder a day or two before this expires, in case you want to renew the URL.</span>
-          <br/><br/><a href="/" style="text-decoration:none;"><button type="button">create another catchy.link</button></a>
-        </td>
-      </tr>
-    </table>
-  </form>
-</body>
+    <link rel="stylesheet" media="screen" type="text/css" href="catchylink.css">
+  </head>
+  <body>
+    <form action="/" method="post">
+      <table width="97%" class="middle-block" align="center">
+        <tr>
+          <td style="padding-left:0;" width="5%">
+            <h2>catchy.link</h2>
+          </td>
+          <td width="95%">
+            <h3>Turn a long internet url into something that is easy to remember.</h3>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            Congratulations.<br/><br/>
+            <a href="{{catchylink_root_url}}/{{shorturl_a}}" style="margin-left:2em;">{{catchylink_root_url}}/{{shorturl_t}}</a><br/><br/>
+            now points to:<br/><br/>
+            <a href="{{longurl_a}}" style="margin-left:2em;">{{longurl_t}}</a><br/><br/>
+            This link will be valid for about {{duration}}. You can alter this catchy.link at any time using this same email address.
+            <span {{reminder}}>You will be emailed a reminder a day or two before this expires, in case you want to renew the URL.</span>
+            <br/><br/><a href="/" style="text-decoration:none;"><button type="button" class="middle-button">create another catchy.link</button></a>
+          </td>
+        </tr>
+      </table>
+    </form>
+  </body>
 </html>
