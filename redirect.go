@@ -1,7 +1,9 @@
 package catchylink
 
 import (
+    "fmt"
     "time"
+    "html"
     "strings"
     "net/http"
     "google.golang.org/appengine"
@@ -21,6 +23,13 @@ func redirect_to_url(w http.ResponseWriter, r *http.Request,url string) {
     http.Redirect(w,r,url,redirect_code)
 }
 
+func not_found_form(w http.ResponseWriter,catchyUrl string) {
+    var page string
+    w.WriteHeader(http.StatusNotFound)
+    page = strings.Replace(notfound_404_form_html,"{{catchyurl-value}}",html.EscapeString(catchyUrl),1)
+    page = strings.Replace(page,"{{notfound-link}}",myRootUrl+"/"+catchyUrl,1)
+    fmt.Fprint(w,page)
+}
 
 func redirect_handler(w http.ResponseWriter, r *http.Request) {
     if r.URL.Path == "/" {
@@ -39,12 +48,13 @@ func redirect_handler(w http.ResponseWriter, r *http.Request) {
         //log.Infof(ctx, "\nEscapedPath(): %s\n",r.URL.EscapedPath())
 
         // strip any slashes or spaces from beginning or end of this raw query string
-        var lCatchyUrl string
-        lCatchyUrl = r.URL.Path
+        var catchyUrl, lCatchyUrl string
+        catchyUrl = r.URL.Path
         if r.URL.RawQuery != "" {
-            lCatchyUrl += "?" + r.URL.RawQuery
+            catchyUrl += "?" + r.URL.RawQuery
         }
-        lCatchyUrl = strings.ToLower(strings.TrimRight(strings.TrimLeft(lCatchyUrl,"/ \n\r\t"),"/ \n\r\t"))
+        catchyUrl = strings.TrimRight(strings.TrimLeft(catchyUrl,"/ \n\r\t"),"/ \n\r\t")
+        lCatchyUrl = strings.ToLower(catchyUrl)
         //log.Infof(ctx, "lCatchyUrl = \"%s\"\n",lCatchyUrl)
         //log.Infof(ctx, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 
@@ -73,7 +83,7 @@ func redirect_handler(w http.ResponseWriter, r *http.Request) {
                 //log.Infof(ctx,"key from %s = %v",lCatchyUrl,key)
                 if datastore.Get(ctx, key, &redirect) != nil {
                     // there is no existing record
-                    input_form_with_error_msg(w,"globalerror","Unrecognized catchy.link URL",nil)
+                    not_found_form(w,catchyUrl)
                 } else {
                     // don't check here for expiration time, because the periodic cleaner will remove stuff at least once
                     // per day, and if something is returned for up to a day too long then who cares...

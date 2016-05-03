@@ -160,7 +160,14 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     // remove / from the end of the CatchyUrl (they cause problems)
     form.CatchyUrl = strings.TrimRight(form.CatchyUrl,"/ \n\r\t")
 
-    form.LCatchyUrl = strings.ToLower(form.CatchyUrl)
+    if r.PostFormValue("from404") != "" {
+        // this comes directly from a 404 page where someone asked to try again, so just return
+        // page
+        input_form_with_error_msg(w,"","",&form)
+        return
+    }
+
+    lCatchyUrl := strings.ToLower(form.CatchyUrl)
 
     // VALIDATE THE INPUT
     if errormsg = errormsg_if_blank(form.LongUrl,"Long URL"); errormsg!="" {
@@ -195,7 +202,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         input_form_with_error_msg(w,"longurl","Long URL is too long (keep it under 1000)",&form)
         return
     }
-    if 250 < len(form.LCatchyUrl) {
+    if 250 < len(lCatchyUrl) {
         input_form_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",&form)
         return
     }
@@ -206,7 +213,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     // check that it's not one of our few disallowed files
     for _, each := range disallowed_roots {
-        if strings.HasPrefix(form.LCatchyUrl,each) {
+        if strings.HasPrefix(lCatchyUrl,each) {
             input_form_with_error_msg(w,"catchyurl","Catchy URL cannot begin with \"" + each + "\"",&form)
             return
         }
@@ -219,7 +226,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     }
 
     lEmail = strings.ToLower(form.Email)
-    if violates_special_email_root_rule(ctx,form.LCatchyUrl,lEmail) {
+    if violates_special_email_root_rule(ctx,lCatchyUrl,lEmail) {
         input_form_with_error_msg(w,"catchyurl",
                                   "This catchy.link appears to begin with an email address, but it does not match your email address. There is a special " +
                                   "rule that any catchy.link beginning with an email address \"belongs\" to the person with that email address, and so " +
@@ -232,7 +239,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     now := time.Now()
 
     // check that this record doesn't already exist in the DB
-    if does_this_catchy_url_belong_to_someone_else(ctx,form.LCatchyUrl,lEmail,now) {
+    if does_this_catchy_url_belong_to_someone_else(ctx,lCatchyUrl,lEmail,now) {
         input_form_with_error_msg(w,"catchyurl","This catchy.link was already taken by someone else. Sorry.",&form)
         return
     }

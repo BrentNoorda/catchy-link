@@ -58,6 +58,7 @@ func init() {
     input_form_html = strings.Replace(read_min_web_file("input_form.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
     input_form_success_html = strings.Replace(read_min_web_file("input_form_success.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
     email_doit_success_html = strings.Replace(read_min_web_file("email_doit_success.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
+    notfound_404_form_html = strings.Replace(read_min_web_file("notfound_404_form.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
 
     // if Mailgun parameters are in the environment variables, read them now. Getting
     // those paramaters is an annoying kludge seen in run.py or deploy.py and writing
