@@ -67,10 +67,10 @@ func prepare_email_body(linkRequest CatchyLinkRequest, doitUrl string) (body,htm
     var noUrlLink string
 
     body = "You have requested a memorable URL to redirect:\n\n" +
-           "   " + myRootUrl + "/" + linkRequest.CatchyUrl + "\n\n" +
+           "   " + strings.Replace(myRootUrl,"//","// ",1) + "/" + linkRequest.CatchyUrl + "\n\n" +
            "to\n\n" +
            "   " + linkRequest.LongUrl + "\n\n\n" +
-           "To VERIFY this url request, click on the following link:\n\n" +
+           "To VERIFY this url request, click on the following link (or copy and paste it to the address field in your browser):\n\n" +
            "   VERIFY: " + doitUrl + "\n"
 
     // make url disguised so email reader doens't automatically make it a link
