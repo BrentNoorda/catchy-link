@@ -5,6 +5,7 @@ import (
 
 var myRootUrl = "http://catchy.link"  // this overridden if "CATCHYLINK_ROOT_URL" environment variable
 const RequestTimeMin = 30       // requests will timeout in this many minutes
+const expiration_warning_days = 3 // how many days before expiration will an email be sent out
 
 var disallowed_roots = [...]string {
     "index.",
@@ -29,8 +30,9 @@ type FormInput struct {
 
 type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
     LongUrl, CatchyUrl, Email string
-    Expire   int64
+    Expire   int64  // when this expires, will be extended at least to expiration_warning_days when warning email is sent out
     Duration int16  // original duration in days
+    Warned   bool   // has the expiration warning been sent (automatically set for timeout in 1-day because no email sent)
 }
 
 var input_form_html string
