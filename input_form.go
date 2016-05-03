@@ -25,6 +25,33 @@ func add_scheme_if_missing(inUrl string) (outUrl, errormsg string) {
     return
 }
 
+func violates_special_email_root_rule(ctx context.Context,lCatchyUrl,lEmail string) bool { // catchylinks starting with email must belong to user
+    // this should be easy with a regular expression - but I don't feel like taking the time to work out the correct regexp
+    var url_parts []string
+    var email_parts []string
+
+    url_parts = strings.Split(lCatchyUrl,"/")
+    email_parts = strings.Split(url_parts[0],"@")
+
+    if len(email_parts) == 2  &&
+       email_parts[0] != ""   &&
+       email_parts[1] != "" {
+        // has something@something
+        var domain_parts []string
+        domain_parts = strings.Split(email_parts[1],".")
+        if len(domain_parts) >= 2  &&
+           domain_parts[0] != ""   &&
+           domain_parts[1] != "" {
+            // has something@something.something
+
+            if url_parts[0] != lEmail {
+                return true
+            }
+        }
+    }
+    return false
+}
+
 func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest,sender_email_address string) {
     var page string
     page = strings.Replace(input_form_success_html,"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
@@ -73,6 +100,7 @@ func input_form(w http.ResponseWriter) {
 func input_form_with_error_msg(w http.ResponseWriter,fieldname string,errormsg string,form *FormInput) {
     var page string
     page = strings.Replace(input_form_html,"{{"+fieldname+"-style}}","display:inline;",1)
+    page = strings.Replace(page,"{{"+fieldname+"-table-style}}","display:table-row;",1)
     page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
 
     if form != nil {
@@ -116,6 +144,7 @@ func does_this_catchy_url_belong_to_someone_else(ctx context.Context, lCatchyUrl
 func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     var errormsg string
     var err error
+    var lEmail string
     ctx := appengine.NewContext(r)
 
     r.ParseForm()
@@ -189,10 +218,21 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    lEmail = strings.ToLower(form.Email)
+    if violates_special_email_root_rule(ctx,form.LCatchyUrl,lEmail) {
+        input_form_with_error_msg(w,"catchyurl",
+                                  "This catchy.link appears to begin with an email address, but it does not match your email address. There is a special " +
+                                  "rule that any catchy.link beginning with an email address \"belongs\" to the person with that email address, and so " +
+                                  "may be submitted only by the person with that email address.",
+                                  &form)
+        return
+    }
+
+
     now := time.Now()
 
     // check that this record doesn't already exist in the DB
-    if does_this_catchy_url_belong_to_someone_else(ctx,form.LCatchyUrl,strings.ToLower(form.Email),now) {
+    if does_this_catchy_url_belong_to_someone_else(ctx,form.LCatchyUrl,lEmail,now) {
         input_form_with_error_msg(w,"catchyurl","This catchy.link was already taken by someone else. Sorry.",&form)
         return
     }

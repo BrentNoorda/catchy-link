@@ -34,13 +34,19 @@ func redirect_handler(w http.ResponseWriter, r *http.Request) {
         ctx := appengine.NewContext(r)
 
         //log.Infof(ctx, "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
-        //log.Infof(ctx, "\nPath: %s\nRawPath: %s\nRawQuery: %s",r.URL.RawQuery,r.URL.Path,r.URL.RawPath,r.URL.RawQuery)
+        //log.Infof(ctx, "\nPath: %s\nRawPath: %s\nRawQuery: %s",r.URL.Path,r.URL.RawPath,r.URL.RawQuery)
         //log.Infof(ctx, "\nRequestURI: %s\n",r.RequestURI)
-        //log.Infof(ctx, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+        //log.Infof(ctx, "\nEscapedPath(): %s\n",r.URL.EscapedPath())
 
         // strip any slashes or spaces from beginning or end of this raw query string
         var lCatchyUrl string
-        lCatchyUrl = strings.ToLower(strings.TrimRight(strings.TrimLeft(r.RequestURI,"/ \n\r\t"),"/ \n\r\t"))
+        lCatchyUrl = r.URL.Path
+        if r.URL.RawQuery != "" {
+            lCatchyUrl += "?" + r.URL.RawQuery
+        }
+        lCatchyUrl = strings.ToLower(strings.TrimRight(strings.TrimLeft(lCatchyUrl,"/ \n\r\t"),"/ \n\r\t"))
+        //log.Infof(ctx, "lCatchyUrl = \"%s\"\n",lCatchyUrl)
+        //log.Infof(ctx, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 
         if lCatchyUrl == "" {
             input_form(w)
