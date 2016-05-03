@@ -74,7 +74,7 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
                         redirect.CatchyUrl = e.CatchyUrl
                         redirect.Email = e.Email
                         redirect.Duration = e.Duration
-                        redirect.Expire = time.Now().Unix() + (int64(redirect.Duration) * 60 * 24 * 24)
+                        redirect.Expire = time.Now().Unix() + (int64(redirect.Duration) * 60 * 60 * 24)
 
                         _, err = datastore.Put(ctx,key,&redirect)
 
