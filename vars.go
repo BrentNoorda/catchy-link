@@ -24,7 +24,7 @@ type CatchyLinkRequest struct {
 }
 
 type FormInput struct {
-    LongUrl, CatchyUrl, LCatchyUrl, Email, Duration string
+    LongUrl, CatchyUrl, Email, Duration string
 }
 
 type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
@@ -36,6 +36,7 @@ type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
 var input_form_html string
 var input_form_success_html string
 var email_doit_success_html string
+var notfound_404_form_html string
 
 ///////// EMAIL /////////
 // use mailgun if Mailgun is not nil, else default to sender_email_address
