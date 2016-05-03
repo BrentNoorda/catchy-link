@@ -16,6 +16,14 @@ import (
     "github.com/mailgun/mailgun-go"     // of this is missing do# goapp get github.com/mailgun/mailgun-go
 )
 
+func add_scheme_if_missing(inUrl string) (outUrl, errormsg string) {
+    outUrl = inUrl
+    if strings.Index(outUrl,"://") < 1 {
+        outUrl = "http://" + outUrl
+        errormsg = "\"http://\"" + " added to Long URL. If that is OK then resubmit this form."
+    }
+    return
+}
 
 func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest,sender_email_address string) {
     var page string
@@ -107,6 +115,7 @@ func does_this_catchy_url_belong_to_someone_else(ctx context.Context, lCatchyUrl
 
 func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     var errormsg string
+    var err error
     ctx := appengine.NewContext(r)
 
     r.ParseForm()
@@ -174,6 +183,12 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         }
     }
 
+    // a few special checks for special situations
+    if form.LongUrl, errormsg = add_scheme_if_missing(form.LongUrl); errormsg != "" {
+        input_form_with_error_msg(w,"longurl",errormsg,&form)
+        return
+    }
+
     now := time.Now()
 
     // check that this record doesn't already exist in the DB
@@ -193,7 +208,8 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         Expire: expire.Unix(),
         Duration: int16(duration),
     }
-    key, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
+    var key *datastore.Key
+    key, err = datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
@@ -231,10 +247,10 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         )
         message.SetHtml(htmlBody)
 
-        _, _, err := mg.Send(message)
+        _, _, err = mg.Send(message)
         if err != nil {
             log.Errorf(ctx, "Could not send email from Mailgun: %v", err)
-            input_form_with_error_msg(w,"globalerror","Unspecified error sending email to that address. Sorry.",nil)
+            input_form_with_error_msg(w,"youremail","Unspecified error sending email to that address. Sorry.",&form)
             return
         }
 
@@ -248,9 +264,9 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
             Body:    body,
             HTMLBody:htmlBody,
         }
-        if err := mail.Send(ctx, msg); err != nil {
+        if err = mail.Send(ctx, msg); err != nil {
             log.Errorf(ctx, "Could not send email: %v", err)
-            input_form_with_error_msg(w,"globalerror","Unspecified error sending email to that address. Sorry.",nil)
+            input_form_with_error_msg(w,"youremail","Unspecified error sending email to that address. Sorry.",&form)
             return
         }
     }
