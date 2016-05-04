@@ -33,7 +33,7 @@ type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
     LongUrl, CatchyUrl, Email string
     Expire   int64  // when this expires, will be extended at least to expiration_warning_days when warning email is sent out
     Duration int16  // original duration in days
-    Warned   int8   // count how many times a warning email has gone out
+    Warn     int8   // count how many times a warning email has gone out
 }
 
 var input_form_html string

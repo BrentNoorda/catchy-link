@@ -52,7 +52,7 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
         } else {
 
             log.Infof(ctx,"key = %v\nredirect = %v",key,redirect)
-            if (redirect.Duration > 1) && (redirect.Warned < max_email_warning_retries) { // ignore 1-day only or if too many already sent
+            if (redirect.Duration > 1) && (redirect.Warn < max_email_warning_retries) { // ignore 1-day only or if too many already sent
 
                 // send an email for this record, giving the user a chance to renew, and then change the record to know
                 // that such an email has already been sent (and set expire up a tad)
