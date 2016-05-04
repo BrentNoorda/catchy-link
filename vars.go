@@ -8,6 +8,9 @@ const RequestTimeMin = 30       // requests will timeout in this many minutes
 const expiration_warning_days = 3 // how many days before expiration will an email be sent out
 const max_email_warning_retries = 3 // if cannot successfully email after this many days&retries, then give up
 
+var seconds_per_day int64 = 60 * 60 * 24  // when debugging or developing locally, this number may be reduced
+                                          // so we can wait minutes (for example) for stuff to time out instead of days
+
 var disallowed_roots = [...]string {
     "index.",
     "favicon.ico",

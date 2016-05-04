@@ -73,7 +73,7 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
     var expiring_soon_cutoff int64
 
     now = time.Now()
-    expiring_soon_cutoff = now.Unix() + ((expiration_warning_days+666/*TODO remove 666*/) * (60*60*24))
+    expiring_soon_cutoff = now.Unix() + (expiration_warning_days * seconds_per_day)
     query = datastore.NewQuery("redirect").Filter("Expire <",expiring_soon_cutoff)
     for q_iter := query.Run(ctx); ; {
         var redirect CatchyLinkRedirect
@@ -96,7 +96,7 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
                 // that such an email has already been sent (and set expire up a tad)
 
                 // create CatchyLinkRequest for user to update
-                expire := now.Add( time.Duration(max_email_warning_retries*(60*60*24)*(1000*1000*1000)) )
+                expire := now.Add( time.Duration(max_email_warning_retries*seconds_per_day*(1000*1000*1000)) )
                 linkRequest := CatchyLinkRequest {
                     UniqueKey: random_string(55),
                     LongUrl: redirect.LongUrl,
@@ -170,7 +170,7 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
                 } else {
                     redirect.Warn = 127     // appears to have worked - don't try again
                 }
-                redirect.Expire = now.Unix() + (expiration_warning_days * (60*60*(24+3)))
+                redirect.Expire = now.Unix() + (expiration_warning_days * seconds_per_day)
                 if _,err = datastore.Put(ctx,redirect_key,&redirect); err != nil {
                     log.Errorf(ctx,"error on datastore.Put redirect in cron; err = %v; redirect = %v; redirect_key = %v",err,redirect,redirect_key)
                 }

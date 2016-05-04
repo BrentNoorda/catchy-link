@@ -5,6 +5,7 @@ import (
     "fmt"
     "time"
     "strings"
+    "strconv"
     "io/ioutil"
     "net/http"
     "math/rand"
@@ -90,9 +91,16 @@ func catchylink_css() string {
 func init() {
     rand.Seed(time.Now().UnixNano())
 
-    if os.Getenv("CATCHYLINK_ROOT_URL") != "" {
+    if txt := os.Getenv("CATCHYLINK_ROOT_URL"); txt != "" {
+        myRootUrl = txt
+    }
+    if txt := os.Getenv("CATCHYLINK_SECONDS_PER_DAY"); txt != "" {
+        seconds_per_day,_ = strconv.ParseInt(txt,10,64)
+    }
+    if os.Getenv("CATCHYLINK_SECONDS_PER_DAYROOT_URL") != "" {
         myRootUrl = os.Getenv("CATCHYLINK_ROOT_URL")
     }
+    fmt.Fprintf(os.Stderr,"INIT\nmyRootUrl = %s\nsec/day = %d\n",myRootUrl,seconds_per_day)
 
     // if Mailgun parameters are in the environment variables, read them now. Getting
     // those paramaters is an annoying kludge seen in run.py or deploy.py and writing
