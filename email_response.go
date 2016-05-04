@@ -75,11 +75,7 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
                         redirect.Email = e.Email
                         redirect.Duration = e.Duration
                         redirect.Expire = time.Now().Unix() + (int64(redirect.Duration) * 60 * 60 * 24)
-                        if ( e.Duration <= 1 ) {
-                            redirect.Warned = false
-                        } else {
-                            redirect.Warned = true  // not really warned, but no warning at all if timeout is so soon
-                        }
+                        redirect.Warned = 0
 
                         _, err = datastore.Put(ctx,key,&redirect)
 

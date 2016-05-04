@@ -40,7 +40,7 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
 
     now = time.Now()
     expiring_soon_cutoff = now.Unix() + ((expiration_warning_days+666/*TODO remove 666*/) * (60*60*24))
-    query = datastore.NewQuery("redirect").Filter("Expire <",expiring_soon_cutoff).Filter("Warned =",false)
+    query = datastore.NewQuery("redirect").Filter("Expire <",expiring_soon_cutoff)
     for q_iter := query.Run(ctx); ; {
         var redirect CatchyLinkRedirect
         key, err = q_iter.Next(&redirect)
@@ -51,11 +51,14 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
             break
         } else {
 
-            // send an email for this record, giving the user a chance to renew, and then change the record to know
-            // that such an email has already been sent (and set expire up a tad)
-
-
             log.Infof(ctx,"key = %v\nredirect = %v",key,redirect)
+            if (redirect.Duration > 1) && (redirect.Warned < max_email_warning_retries) { // ignore 1-day only or if too many already sent
+
+                // send an email for this record, giving the user a chance to renew, and then change the record to know
+                // that such an email has already been sent (and set expire up a tad)
+
+
+            }
         }
     }
 }
