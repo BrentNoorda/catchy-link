@@ -54,7 +54,7 @@ func violates_special_email_root_rule(ctx context.Context,lCatchyUrl,lEmail stri
 
 func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest,sender_email_address string) {
     var page string
-    page = strings.Replace(input_form_success_html,"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
+    page = strings.Replace(input_form_success_html(),"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
     page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)
     page = strings.Replace(page,"{{shorturl_t}}",html.EscapeString(linkRequest.CatchyUrl),1)
     page = strings.Replace(page,"{{youremail}}",html.EscapeString(linkRequest.Email),1)
@@ -62,15 +62,15 @@ func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest,send
     fmt.Fprint(w,page)
 }
 
-func prepare_email_body(linkRequest CatchyLinkRequest, doitUrl string) (body,htmlBody string) {
+func prepare_request_email_body(linkRequest CatchyLinkRequest, doitUrl string) (body,htmlBody string) {
 
     var noUrlLink string
 
     body = "You have requested a memorable URL to redirect:\n\n" +
-           "   " + myRootUrl + "/" + linkRequest.CatchyUrl + "\n\n" +
+           "   " + strings.Replace(myRootUrl,"//","// ",1) + "/" + linkRequest.CatchyUrl + "\n\n" +
            "to\n\n" +
            "   " + linkRequest.LongUrl + "\n\n\n" +
-           "To VERIFY this url request, click on the following link:\n\n" +
+           "To VERIFY this url request, click on the following link (or copy and paste it to the address field in your browser):\n\n" +
            "   VERIFY: " + doitUrl + "\n"
 
     // make url disguised so email reader doens't automatically make it a link
@@ -94,14 +94,17 @@ func prepare_email_body(linkRequest CatchyLinkRequest, doitUrl string) (body,htm
 }
 
 func input_form(w http.ResponseWriter) {
-    fmt.Fprint(w,input_form_html)
+    fmt.Fprint(w,input_form_html())
 }
 
-func input_form_with_error_msg(w http.ResponseWriter,fieldname string,errormsg string,form *FormInput) {
+func input_form_with_message(w http.ResponseWriter,fieldname string,errormsg string,extramsg string,form *FormInput) {
     var page string
-    page = strings.Replace(input_form_html,"{{"+fieldname+"-style}}","display:inline;",1)
+
+    page = strings.Replace(input_form_html(),"{{"+fieldname+"-style}}","display:inline;",1)
     page = strings.Replace(page,"{{"+fieldname+"-table-style}}","display:table-row;",1)
     page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
+
+    page = strings.Replace(page,"<!--etc-->",extramsg,1)
 
     if form != nil {
         page = strings.Replace(page,"selected=\"selected\"","",1)
@@ -163,7 +166,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     if r.PostFormValue("from404") != "" {
         // this comes directly from a 404 page where someone asked to try again, so just return
         // page
-        input_form_with_error_msg(w,"","",&form)
+        input_form_with_message(w,"","","",&form)
         return
     }
 
@@ -171,67 +174,67 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     // VALIDATE THE INPUT
     if errormsg = errormsg_if_blank(form.LongUrl,"Long URL"); errormsg!="" {
-        input_form_with_error_msg(w,"longurl",errormsg,&form)
+        input_form_with_message(w,"longurl",errormsg,"",&form)
         return
     }
     if errormsg = errormsg_if_blank(form.CatchyUrl,"Catchy URL"); errormsg!="" {
-        input_form_with_error_msg(w,"catchyurl",errormsg,&form)
+        input_form_with_message(w,"catchyurl",errormsg,"",&form)
         return
     }
     if errormsg = errormsg_if_blank(form.Email,"Your Email"); errormsg!="" {
-        input_form_with_error_msg(w,"youremail",errormsg,&form)
+        input_form_with_message(w,"youremail",errormsg,"",&form)
         return
     }
     if strings.ContainsAny(form.LongUrl," \t\r\n") {
-        input_form_with_error_msg(w,"longurl","Long URL cannot contain space characters",&form)
+        input_form_with_message(w,"longurl","Long URL cannot contain space characters","",&form)
         return
     }
     if strings.ContainsAny(form.CatchyUrl," \t\r\n") {
-        input_form_with_error_msg(w,"catchyurl","Catchy URL cannot contain space characters",&form)
+        input_form_with_message(w,"catchyurl","Catchy URL cannot contain space characters","",&form)
         return
     }
     if strings.ContainsAny(form.CatchyUrl,"#") {
-        input_form_with_error_msg(w,"catchyurl","Catchy URL cannot contain the character \"#\"",&form)
+        input_form_with_message(w,"catchyurl","Catchy URL cannot contain the character \"#\"","",&form)
         return
     }
     if strings.ContainsAny(form.CatchyUrl,"+%") {
-        input_form_with_error_msg(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"",&form)
+        input_form_with_message(w,"catchyurl","Catchy URL cannot contain characters \"+\" or \"%\"","",&form)
         return
     }
     if 1000 < len(form.LongUrl) {
-        input_form_with_error_msg(w,"longurl","Long URL is too long (keep it under 1000)",&form)
+        input_form_with_message(w,"longurl","Long URL is too long (keep it under 1000)","",&form)
         return
     }
     if 250 < len(lCatchyUrl) {
-        input_form_with_error_msg(w,"catchyurl","Catchy URL is too long (keep it under 250)",&form)
+        input_form_with_message(w,"catchyurl","Catchy URL is too long (keep it under 250)","",&form)
         return
     }
     if 150 < len(form.Email) {
-        input_form_with_error_msg(w,"youremail","Your Email is too long (keep it under 150)",&form)
+        input_form_with_message(w,"youremail","Your Email is too long (keep it under 150)","",&form)
         return
     }
 
     // check that it's not one of our few disallowed files
     for _, each := range disallowed_roots {
         if strings.HasPrefix(lCatchyUrl,each) {
-            input_form_with_error_msg(w,"catchyurl","Catchy URL cannot begin with \"" + each + "\"",&form)
+            input_form_with_message(w,"catchyurl","Catchy URL cannot begin with \"" + each + "\"","",&form)
             return
         }
     }
 
     // a few special checks for special situations
     if form.LongUrl, errormsg = add_scheme_if_missing(form.LongUrl); errormsg != "" {
-        input_form_with_error_msg(w,"longurl",errormsg,&form)
+        input_form_with_message(w,"longurl",errormsg,"",&form)
         return
     }
 
     lEmail = strings.ToLower(form.Email)
     if violates_special_email_root_rule(ctx,lCatchyUrl,lEmail) {
-        input_form_with_error_msg(w,"catchyurl",
-                                  "This catchy.link appears to begin with an email address, but it does not match your email address. There is a special " +
-                                  "rule that any catchy.link beginning with an email address \"belongs\" to the person with that email address, and so " +
-                                  "may be submitted only by the person with that email address.",
-                                  &form)
+        input_form_with_message(w,"catchyurl",
+                                "This catchy.link appears to begin with an email address, but it does not match your email address. There is a special " +
+                                "rule that any catchy.link beginning with an email address \"belongs\" to the person with that email address, and so " +
+                                "may be submitted only by the person with that email address.",
+                                "",&form)
         return
     }
 
@@ -240,12 +243,12 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     // check that this record doesn't already exist in the DB
     if does_this_catchy_url_belong_to_someone_else(ctx,lCatchyUrl,lEmail,now) {
-        input_form_with_error_msg(w,"catchyurl","This catchy.link was already taken by someone else. Sorry.",&form)
+        input_form_with_message(w,"catchyurl","This catchy.link was already taken by someone else. Sorry.","",&form)
         return
     }
 
     // create CatchyLinkRequest and inform user about it
-    expire := now.Add( time.Duration(RequestTimeMin*60*1000*1000*1000) )
+    expire := now.Add( time.Duration(RequestTimeMin*60*(1000*1000*1000)) )
     duration,_ := strconv.Atoi(form.Duration)
     linkRequest := CatchyLinkRequest {
         UniqueKey: random_string(55),
@@ -264,7 +267,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     doitUrl := fmt.Sprintf("%s/~/doit/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
     //cancelUrl := fmt.Sprintf("%s/~/cancel/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
-    body,htmlBody := prepare_email_body(linkRequest,doitUrl)
+    body,htmlBody := prepare_request_email_body(linkRequest,doitUrl)
     subject := "Verify URL on Catchy.Link"
 
     log.Infof(ctx,"-------------------------------------------------------------")
@@ -297,7 +300,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         _, _, err = mg.Send(message)
         if err != nil {
             log.Errorf(ctx, "Could not send email from Mailgun: %v", err)
-            input_form_with_error_msg(w,"youremail","Unspecified error sending email to that address. Sorry.",&form)
+            input_form_with_message(w,"youremail","Unspecified error sending email to that address. Sorry.","",&form)
             return
         }
 
@@ -313,7 +316,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         }
         if err = mail.Send(ctx, msg); err != nil {
             log.Errorf(ctx, "Could not send email: %v", err)
-            input_form_with_error_msg(w,"youremail","Unspecified error sending email to that address. Sorry.",&form)
+            input_form_with_message(w,"youremail","Unspecified error sending email to that address. Sorry.","",&form)
             return
         }
     }

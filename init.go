@@ -43,22 +43,56 @@ func read_min_web_file(filespec string,css string) string {
     return ret
 }
 
+// read index.html only once, so we don't read it again and again and again
+var _input_form_html string = ""
+var _input_form_success_html string = ""
+var _email_doit_success_html string = ""
+var _notfound_404_form_html string = ""
+var _catchylink_css string = ""
+
+func input_form_html() string {
+    if _input_form_html == "" {
+        _input_form_html = strings.Replace(read_min_web_file("input_form.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+    }
+    return _input_form_html
+}
+
+func input_form_success_html() string {
+    if _input_form_success_html == "" {
+        _input_form_success_html = strings.Replace(read_min_web_file("input_form_success.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+    }
+    return _input_form_success_html
+}
+
+func email_doit_success_html() string {
+    if _email_doit_success_html == "" {
+        _email_doit_success_html = strings.Replace(read_min_web_file("email_doit_success.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+    }
+    return _email_doit_success_html
+}
+
+func notfound_404_form_html() string {
+    if _notfound_404_form_html == "" {
+        _notfound_404_form_html = strings.Replace(read_min_web_file("notfound_404_form.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+    }
+    return _notfound_404_form_html
+}
+
+func catchylink_css() string {
+    if _catchylink_css == "" {
+        css := read_min_web_file("catchylink.css","")
+        css = strings.Replace(css,": ",":",-1)
+        _catchylink_css = css
+    }
+    return _catchylink_css
+}
+
 func init() {
     rand.Seed(time.Now().UnixNano())
 
     if os.Getenv("CATCHYLINK_ROOT_URL") != "" {
         myRootUrl = os.Getenv("CATCHYLINK_ROOT_URL")
     }
-
-    // put css inline for all of those files
-    css := read_min_web_file("catchylink.css","")
-    css = strings.Replace(css,": ",":",-1)
-
-    // read index.html only once, so we don't read it again and again and again
-    input_form_html = strings.Replace(read_min_web_file("input_form.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
-    input_form_success_html = strings.Replace(read_min_web_file("input_form_success.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
-    email_doit_success_html = strings.Replace(read_min_web_file("email_doit_success.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
-    notfound_404_form_html = strings.Replace(read_min_web_file("notfound_404_form.html",css),"{{catchylink_root_url}}",myRootUrl,-1)
 
     // if Mailgun parameters are in the environment variables, read them now. Getting
     // those paramaters is an annoying kludge seen in run.py or deploy.py and writing

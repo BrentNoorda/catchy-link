@@ -5,6 +5,8 @@ import (
 
 var myRootUrl = "http://catchy.link"  // this overridden if "CATCHYLINK_ROOT_URL" environment variable
 const RequestTimeMin = 30       // requests will timeout in this many minutes
+const expiration_warning_days = 3 // how many days before expiration will an email be sent out
+const max_email_warning_retries = 3 // if cannot successfully email after this many days&retries, then give up
 
 var disallowed_roots = [...]string {
     "index.",
@@ -29,14 +31,10 @@ type FormInput struct {
 
 type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
     LongUrl, CatchyUrl, Email string
-    Expire   int64
+    Expire   int64  // when this expires, will be extended at least to expiration_warning_days when warning email is sent out
     Duration int16  // original duration in days
+    Warn     int8   // count how many times a warning email has gone out
 }
-
-var input_form_html string
-var input_form_success_html string
-var email_doit_success_html string
-var notfound_404_form_html string
 
 ///////// EMAIL /////////
 // use mailgun if Mailgun is not nil, else default to sender_email_address
