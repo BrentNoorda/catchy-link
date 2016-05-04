@@ -27,6 +27,16 @@ func email_doit_success(w http.ResponseWriter,linkRequest *CatchyLinkRequest) {
     fmt.Fprint(w,page)
 }
 
+func email_renew_response(ctx context.Context,w http.ResponseWriter,request *CatchyLinkRequest) {
+    form := FormInput{
+        LongUrl: request.LongUrl,
+        CatchyUrl: request.CatchyUrl,
+        Email: request.Email,
+        Duration: strconv.Itoa(int(request.Duration)),
+    }
+    input_form_with_message(w,"","","<br/><br/>Link Renewal",&form)
+}
+
 func email_doit_response(ctx context.Context,w http.ResponseWriter,request *CatchyLinkRequest) {
     // create the redirect record (unless someone else created it first)
     var key *datastore.Key
@@ -45,7 +55,7 @@ func email_doit_response(ctx context.Context,w http.ResponseWriter,request *Catc
             Email: request.Email,
             Duration: strconv.Itoa(int(request.Duration)),
         }
-        input_form_with_error_msg(w,"globalerror","Looks like someone else already took that catchy.link. That was quick. Sorry.",&form)
+        input_form_with_message(w,"globalerror","Looks like someone else already took that catchy.link. That was quick. Sorry.","",&form)
     } else {
         redirect.LongUrl = request.LongUrl
         redirect.CatchyUrl = request.CatchyUrl
@@ -61,7 +71,7 @@ func email_doit_response(ctx context.Context,w http.ResponseWriter,request *Catc
 
         if err != nil {
             log.Errorf(ctx,"Error %v putting catchyurl record %v",err,redirect)
-            input_form_with_error_msg(w,"globalerror","Unknown error creating record. Sorry.",nil)
+            input_form_with_message(w,"globalerror","Unknown error creating record. Sorry.","",nil)
         } else {
             email_doit_success(w,request)
         }
@@ -73,16 +83,16 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
     parts := strings.Split(r.URL.Path,"/")
     if len(parts) < 5 {
         log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
-        input_form_with_error_msg(w,"globalerror","Unrecognized URL",nil)
+        input_form_with_message(w,"globalerror","Unrecognized URL","",nil)
     } else {
         command := parts[2]
         dbid, err := strconv.ParseInt(parts[3],10,64)
         uniqueKey := parts[4]
         if err != nil {
             log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"\nerror: %v",r.URL.Path,err)
-            input_form_with_error_msg(w,"globalerror","Unrecognized URL",nil)
+            input_form_with_message(w,"globalerror","Unrecognized URL","",nil)
         } else {
-            if command == "doit"  ||  command == "cancel"  ||  command == "renew" {
+            if command == "doit" /*||  command == "cancel"*/  ||  command == "renew" {
 
                 // check if this record exists and is still valid
                 k := datastore.NewKey(ctx, "linkrequest", "", dbid, nil)
@@ -91,22 +101,24 @@ func email_response_handler(w http.ResponseWriter, r *http.Request) {
                 request := new(CatchyLinkRequest)
                 if err := datastore.Get(ctx, k, request); err != nil {
                     log.Errorf(ctx,"email_reponse_handler datastore.Get failed. URL.Path:%s, err:%v",r.URL.Path,err)
-                    input_form_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
+                    input_form_with_message(w,"globalerror","That URL request is not in our system. Maybe it has timed out.","",nil)
                 } else if request.UniqueKey != uniqueKey {
                     log.Errorf(ctx,"email_reponse_handler uniqueKey does not match.")
-                    input_form_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
+                    input_form_with_message(w,"globalerror","That URL request is not in our system. Maybe it has timed out.","",nil)
                 } else if request.Expire <= time.Now().Unix() {
                     log.Errorf(ctx,"email_reponse_handler expire has elapsed.",r.URL.Path)
-                    input_form_with_error_msg(w,"globalerror","That URL request is not in our system. Maybe it has timed out.",nil)
+                    input_form_with_message(w,"globalerror","That URL request is not in our system. Maybe it has timed out.","",nil)
                 } else {
 
                     if ( command == "doit" ) {
                         email_doit_response(ctx,w,request)
+                    } else if ( command == "renew" ) {
+                        email_renew_response(ctx,w,request)
                     }
                 }
             } else {
                 log.Errorf(ctx,"email_reponse_handler weird URL \"%s\"",r.URL.Path)
-                input_form_with_error_msg(w,"globalerror","Unrecognized URL",nil)
+                input_form_with_message(w,"globalerror","Unrecognized URL","",nil)
             }
         }
     }
