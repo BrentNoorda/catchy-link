@@ -16,7 +16,7 @@ import (
 
 func email_doit_success(w http.ResponseWriter,linkRequest *CatchyLinkRequest) {
     var page string
-    page = strings.Replace(email_doit_success_html,"{{shorturl_a}}",strings.Replace(linkRequest.CatchyUrl,"\"","&quot;",1),1)
+    page = strings.Replace(email_doit_success_html(),"{{shorturl_a}}",strings.Replace(linkRequest.CatchyUrl,"\"","&quot;",1),1)
     page = strings.Replace(page,"{{shorturl_t}}",html.EscapeString(linkRequest.CatchyUrl),1)
     page = strings.Replace(page,"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
     page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)

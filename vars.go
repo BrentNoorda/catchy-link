@@ -36,11 +36,6 @@ type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
     Warn     int8   // count how many times a warning email has gone out
 }
 
-var input_form_html string
-var input_form_success_html string
-var email_doit_success_html string
-var notfound_404_form_html string
-
 ///////// EMAIL /////////
 // use mailgun if Mailgun is not nil, else default to sender_email_address
 

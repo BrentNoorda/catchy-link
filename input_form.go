@@ -54,7 +54,7 @@ func violates_special_email_root_rule(ctx context.Context,lCatchyUrl,lEmail stri
 
 func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest,sender_email_address string) {
     var page string
-    page = strings.Replace(input_form_success_html,"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
+    page = strings.Replace(input_form_success_html(),"{{longurl_a}}",strings.Replace(linkRequest.LongUrl,"\"","&quot;",1),1)
     page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)
     page = strings.Replace(page,"{{shorturl_t}}",html.EscapeString(linkRequest.CatchyUrl),1)
     page = strings.Replace(page,"{{youremail}}",html.EscapeString(linkRequest.Email),1)
@@ -94,13 +94,13 @@ func prepare_request_email_body(linkRequest CatchyLinkRequest, doitUrl string) (
 }
 
 func input_form(w http.ResponseWriter) {
-    fmt.Fprint(w,input_form_html)
+    fmt.Fprint(w,input_form_html())
 }
 
 func input_form_with_message(w http.ResponseWriter,fieldname string,errormsg string,extramsg string,form *FormInput) {
     var page string
 
-    page = strings.Replace(input_form_html,"{{"+fieldname+"-style}}","display:inline;",1)
+    page = strings.Replace(input_form_html(),"{{"+fieldname+"-style}}","display:inline;",1)
     page = strings.Replace(page,"{{"+fieldname+"-table-style}}","display:table-row;",1)
     page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
 

@@ -26,7 +26,7 @@ func redirect_to_url(w http.ResponseWriter, r *http.Request,url string) {
 func not_found_form(w http.ResponseWriter,catchyUrl string) {
     var page string
     w.WriteHeader(http.StatusNotFound)
-    page = strings.Replace(notfound_404_form_html,"{{catchyurl-value}}",html.EscapeString(catchyUrl),1)
+    page = strings.Replace(notfound_404_form_html(),"{{catchyurl-value}}",html.EscapeString(catchyUrl),1)
     page = strings.Replace(page,"{{notfound-link}}",myRootUrl+"/"+catchyUrl,1)
     fmt.Fprint(w,page)
 }
