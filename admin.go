@@ -3,17 +3,51 @@ package catchylink
 import (
     "fmt"
     "time"
+    "strings"
     "net/http"
     "google.golang.org/appengine"
     "google.golang.org/appengine/log"
+    "google.golang.org/appengine/mail"
     "google.golang.org/appengine/datastore"
+    "google.golang.org/appengine/urlfetch"
+    "github.com/mailgun/mailgun-go"     // of this is missing do# goapp get github.com/mailgun/mailgun-go
 )
+
+func prepare_renew_email_body(linkRequest CatchyLinkRequest,renewUrl string) (body,htmlBody string) {
+
+    var noUrlLink string
+
+    body = "You have a memorable URL on catchy.link that will be expiring soon. The link:\n\n" +
+           "   " + strings.Replace(myRootUrl,"//","// ",1) + "/" + linkRequest.CatchyUrl + "\n\n" +
+           "redirects to:\n\n" +
+           "   " + linkRequest.LongUrl + "\n\n\n" +
+           "To RENEW this catchy.link, click on the following link (or copy and paste it to the address field in your browser):\n\n" +
+           "   RENEW: " + renewUrl + "\n"
+
+    // make url disguised so email reader doens't automatically make it a link
+    noUrlLink = myRootUrl + "/" + linkRequest.CatchyUrl
+    noUrlLink = strings.Replace(noUrlLink,"/","<font>/</font>",-1)
+    noUrlLink = strings.Replace(noUrlLink,".","<font>.</font>",-1)
+    noUrlLink = strings.Replace(noUrlLink,":","<font>:</font>",-1)
+
+    htmlBody = "<table width=\"97%\" style=\"margin: auto;max-width:800px\" align=\"center\">\n" +
+               "<tr><td width=\"100%\">\n" +
+               "You have a memorable URL on catchy.link that will be expiring soon. The link:<br/><br/>\n" +
+               " &nbsp; " + noUrlLink + "<br/><br/>\n" +
+               "redirects to:<br/><br/>\n" +
+               " &nbsp; <a href=\"" + linkRequest.LongUrl + "\">" + linkRequest.LongUrl + "<a><br/><br/>\n" +
+               "To RENEW this catchy.link, click on the following button:<br/><br/>\n" +
+               " &nbsp; <a href=\"" + renewUrl + "\"><button style=\"background-color:#dddddd;\"><font size=\"+1\">renew catchy.link</font></button><a><br/><br/><br/>\n" +
+               "<font size=\"-2\">if that button fails, copy and paste this url into your browser: " + renewUrl + "</font>" +
+               "</td></tr></table>"
+
+     return
+}
 
 func admin_handler(w http.ResponseWriter, r *http.Request) {
     var query *datastore.Query
     var err error
-    var keys []*datastore.Key
-    var key *datastore.Key
+    var request_keys []*datastore.Key
 
     ctx := appengine.NewContext(r)
     log.Infof(ctx,"%s","!!!!admin_handler<br/>Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
@@ -21,13 +55,13 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
     // remove link requests that have timed out
     if r.URL.Path == "/-/cleanup_old_link_requests" {
         query = datastore.NewQuery("linkrequest").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
-        keys, err = query.GetAll(ctx, nil)
+        request_keys, err = query.GetAll(ctx, nil)
         if err != nil {
             log.Errorf(ctx, "query error: %v", err)
         } else {
-            err := datastore.DeleteMulti(ctx,keys)
+            err := datastore.DeleteMulti(ctx,request_keys)
             if err != nil {
-                log.Errorf(ctx, "DeleteMulti error: %v, keys = %v", err,keys)
+                log.Errorf(ctx, "DeleteMulti error: %v, request_keys = %v", err,request_keys)
             }
         }
     }
@@ -43,7 +77,8 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
     query = datastore.NewQuery("redirect").Filter("Expire <",expiring_soon_cutoff)
     for q_iter := query.Run(ctx); ; {
         var redirect CatchyLinkRedirect
-        key, err = q_iter.Next(&redirect)
+        var redirect_key *datastore.Key
+        redirect_key, err = q_iter.Next(&redirect)
         if ( err == datastore.Done ) {
             break
         } else if err != nil {
@@ -51,12 +86,94 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
             break
         } else {
 
-            log.Infof(ctx,"key = %v\nredirect = %v",key,redirect)
+            log.Infof(ctx,"redirect_key = %v\nredirect = %v",redirect_key,redirect)
             if (redirect.Duration > 1) && (redirect.Warn < max_email_warning_retries) { // ignore 1-day only or if too many already sent
+
+                var request_key *datastore.Key
+                var retry_tomorrow bool = false
 
                 // send an email for this record, giving the user a chance to renew, and then change the record to know
                 // that such an email has already been sent (and set expire up a tad)
 
+                // create CatchyLinkRequest for user to update
+                expire := now.Add( time.Duration(max_email_warning_retries*(60*60*24)*(1000*1000*1000)) )
+                linkRequest := CatchyLinkRequest {
+                    UniqueKey: random_string(55),
+                    LongUrl: redirect.LongUrl,
+                    CatchyUrl: redirect.CatchyUrl,
+                    Email: redirect.Email,
+                    Expire: expire.Unix(),
+                    Duration: redirect.Duration,
+                }
+                request_key, err = datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
+                if err != nil {
+                    log.Errorf(ctx,"Error putting new CatchyLinkRequest in cron = %v",err)
+                    retry_tomorrow = true
+                } else {
+
+                    // send an email that expiration is happening soon
+                    renewUrl := fmt.Sprintf("%s/~/renew/%d/%s",myRootUrl,request_key.IntID(),linkRequest.UniqueKey)
+                    //cancelUrl := fmt.Sprintf("%s/~/cancel/%d/%s",myRootUrl,reqeust_key.IntID(),linkRequest.UniqueKey)
+                    body,htmlBody := prepare_renew_email_body(linkRequest,renewUrl)
+                    subject := "Renew URL on Catchy.Link"
+
+                    log.Infof(ctx,"-------------------------------------------------------------")
+                    log.Infof(ctx,"To: %s",redirect.Email)
+                    log.Infof(ctx,"Subject: %s\n",subject)
+                    log.Infof(ctx,"%s",body)
+                    log.Infof(ctx,"-------------------------------------------------------------")
+
+                    if Mailgun != nil {
+                        // send email message through mailgun
+                        httpc := urlfetch.Client(ctx)
+
+                        mg := mailgun.NewMailgun(
+                            Mailgun.domain_name,
+                            Mailgun.secret_key,
+                            Mailgun.public_key,
+                        )
+                        mg.SetClient(httpc)
+
+                        message := mg.NewMessage(
+                             /* From */ Mailgun.from,
+                             /* Subject */ subject,
+                             /* Body */ body,
+                             /* To */ redirect.Email,
+                        )
+                        message.SetHtml(htmlBody)
+
+                        _, _, err = mg.Send(message)
+                        if err != nil {
+                            log.Errorf(ctx, "Could not send renew email from Mailgun: %v", err)
+                            retry_tomorrow = true
+                        }
+
+                    } else {
+                        // send email message through app engine
+                        msg := &mail.Message{
+                            Sender:  sender_email_address_if_no_mailgun,
+                            To:      []string{redirect.Email},
+                            Subject: subject,
+                            Body:    body,
+                            HTMLBody:htmlBody,
+                        }
+                        if err = mail.Send(ctx, msg); err != nil {
+                            log.Errorf(ctx, "Could not send renew email: %v", err)
+                            retry_tomorrow = true
+                        }
+                    }
+                }
+
+                // update redirect field to reflect having warned the user (whether failed or not)
+                if retry_tomorrow {
+                    redirect.Warn += 1
+                } else {
+                    redirect.Warn = 127     // appears to have worked - don't try again
+                }
+                redirect.Expire = now.Unix() + (expiration_warning_days * (60*60*(24+3)))
+                if _,err = datastore.Put(ctx,redirect_key,&redirect); err != nil {
+                    log.Errorf(ctx,"error on datastore.Put redirect in cron; err = %v; redirect = %v; redirect_key = %v",err,redirect,redirect_key)
+                }
 
             }
         }

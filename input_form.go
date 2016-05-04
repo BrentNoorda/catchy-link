@@ -62,7 +62,7 @@ func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest,send
     fmt.Fprint(w,page)
 }
 
-func prepare_email_body(linkRequest CatchyLinkRequest, doitUrl string) (body,htmlBody string) {
+func prepare_request_email_body(linkRequest CatchyLinkRequest, doitUrl string) (body,htmlBody string) {
 
     var noUrlLink string
 
@@ -245,7 +245,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     }
 
     // create CatchyLinkRequest and inform user about it
-    expire := now.Add( time.Duration(RequestTimeMin*60*1000*1000*1000) )
+    expire := now.Add( time.Duration(RequestTimeMin*60*(1000*1000*1000)) )
     duration,_ := strconv.Atoi(form.Duration)
     linkRequest := CatchyLinkRequest {
         UniqueKey: random_string(55),
@@ -264,7 +264,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
 
     doitUrl := fmt.Sprintf("%s/~/doit/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
     //cancelUrl := fmt.Sprintf("%s/~/cancel/%d/%s",myRootUrl,key.IntID(),linkRequest.UniqueKey)
-    body,htmlBody := prepare_email_body(linkRequest,doitUrl)
+    body,htmlBody := prepare_request_email_body(linkRequest,doitUrl)
     subject := "Verify URL on Catchy.Link"
 
     log.Infof(ctx,"-------------------------------------------------------------")
