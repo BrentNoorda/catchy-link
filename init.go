@@ -5,6 +5,7 @@ import (
     "fmt"
     "time"
     "strings"
+    "strconv"
     "io/ioutil"
     "net/http"
     "math/rand"
@@ -52,7 +53,11 @@ var _catchylink_css string = ""
 
 func input_form_html() string {
     if _input_form_html == "" {
-        _input_form_html = strings.Replace(read_min_web_file("input_form.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+        text := strings.Replace(read_min_web_file("input_form.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+        if local_debugging {
+            text = strings.Replace(text,"</body>","<a style=\"float:right;color:#eeeeee;\" href=\"/~/build-local-debug-db\">BUILD</a></body>",1)
+        }
+        _input_form_html = text
     }
     return _input_form_html
 }
@@ -90,9 +95,19 @@ func catchylink_css() string {
 func init() {
     rand.Seed(time.Now().UnixNano())
 
-    if os.Getenv("CATCHYLINK_ROOT_URL") != "" {
-        myRootUrl = os.Getenv("CATCHYLINK_ROOT_URL")
+    if txt := os.Getenv("CATCHYLINK_ROOT_URL"); txt != "" {
+        myRootUrl = txt
     }
+    if txt := os.Getenv("CATCHYLINK_SECONDS_PER_DAY"); txt != "" {
+        seconds_per_day,_ = strconv.ParseInt(txt,10,64)
+    }
+    if os.Getenv("CATCHYLINK_LOCAL_DEBUGGING") != "" {
+        local_debugging = true
+    }
+    if txt := os.Getenv("CATCHYLINK_LOCAL_DEBUGGING_EMAIL"); txt != "" {
+        local_debugging_email = txt
+    }
+    fmt.Fprintf(os.Stderr,"INIT\nmyRootUrl = %s\nsec/day = %d\nlocal_debugging = %t\n",myRootUrl,seconds_per_day,local_debugging)
 
     // if Mailgun parameters are in the environment variables, read them now. Getting
     // those paramaters is an annoying kludge seen in run.py or deploy.py and writing
@@ -110,6 +125,9 @@ func init() {
     http.HandleFunc("/robots.txt", robots_txt_handler)
     http.HandleFunc("/favicon.ico", favicon_ico_handler)
     http.HandleFunc("/-/", admin_handler)
+    if local_debugging {
+        http.HandleFunc("/~/build-local-debug-db", build_local_debug_db)
+    }
     http.HandleFunc("/~/", email_response_handler)
     http.HandleFunc("/", redirect_handler)
 }

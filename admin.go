@@ -4,7 +4,9 @@ import (
     "fmt"
     "time"
     "strings"
+    "strconv"
     "net/http"
+    "golang.org/x/net/context"
     "google.golang.org/appengine"
     "google.golang.org/appengine/log"
     "google.golang.org/appengine/mail"
@@ -50,22 +52,30 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
     var request_keys []*datastore.Key
 
     ctx := appengine.NewContext(r)
+
+    if r.URL.Path != "/-/cleanup_old_db_stuff" {
+        log.Errorf(ctx, "admin_handler r.URL.Path=\"%s\" != \"%s\"",r.URL.Path,"/-/cleanup_old_db_stuff")
+        return
+    }
+
+    log.Infof(ctx,"vvvvvvvvvvvvvvvvvvvvvvvvvvv ADMIN_HANDLER vvvvvvvvvvvvvvvvvvvvvvvvvvv")
     log.Infof(ctx,"%s","!!!!admin_handler<br/>Path:\"" + r.URL.Path + "\"  RawPath:\"" + r.URL.RawPath + "\"  RawQuery:\"" + r.URL.RawQuery + "\"")
 
+    /***************************************************************************************************************/
     // remove link requests that have timed out
-    if r.URL.Path == "/-/cleanup_old_link_requests" {
-        query = datastore.NewQuery("linkrequest").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
-        request_keys, err = query.GetAll(ctx, nil)
+    query = datastore.NewQuery("linkrequest").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
+    request_keys, err = query.GetAll(ctx, nil)
+    if err != nil {
+        log.Errorf(ctx, "admin_handler linkrequest query error: %v", err)
+    } else {
+        log.Infof(ctx,"admin_handler linkrequest delete %d keys",len(request_keys))
+        err := datastore.DeleteMulti(ctx,request_keys)
         if err != nil {
-            log.Errorf(ctx, "query error: %v", err)
-        } else {
-            err := datastore.DeleteMulti(ctx,request_keys)
-            if err != nil {
-                log.Errorf(ctx, "DeleteMulti error: %v, request_keys = %v", err,request_keys)
-            }
+            log.Errorf(ctx, "admin_handler linkrequest DeleteMulti error: %v, request_keys = %v", err,request_keys)
         }
     }
 
+    /***************************************************************************************************************/
     // send emails to everyone who is going to expire in expiration_warning_days or less, and has not yet
     // received a warning email. Also extend their expiration time so they have at least expiration_warning_days
     // after receiving the email
@@ -73,8 +83,10 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
     var expiring_soon_cutoff int64
 
     now = time.Now()
-    expiring_soon_cutoff = now.Unix() + ((expiration_warning_days+666/*TODO remove 666*/) * (60*60*24))
+    expiring_soon_cutoff = now.Unix() + (expiration_warning_days * seconds_per_day)
     query = datastore.NewQuery("redirect").Filter("Expire <",expiring_soon_cutoff)
+    expiration_warning_count := 0
+    expiration_warning_retry_count := 0
     for q_iter := query.Run(ctx); ; {
         var redirect CatchyLinkRedirect
         var redirect_key *datastore.Key
@@ -86,9 +98,9 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
             break
         } else {
 
-            log.Infof(ctx,"redirect_key = %v\nredirect = %v",redirect_key,redirect)
             if (redirect.Duration > 1) && (redirect.Warn < max_email_warning_retries) { // ignore 1-day only or if too many already sent
 
+                expiration_warning_count += 1
                 var request_key *datastore.Key
                 var retry_tomorrow bool = false
 
@@ -96,7 +108,7 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
                 // that such an email has already been sent (and set expire up a tad)
 
                 // create CatchyLinkRequest for user to update
-                expire := now.Add( time.Duration(max_email_warning_retries*(60*60*24)*(1000*1000*1000)) )
+                expire := now.Add( time.Duration(max_email_warning_retries*seconds_per_day*(1000*1000*1000)) )
                 linkRequest := CatchyLinkRequest {
                     UniqueKey: random_string(55),
                     LongUrl: redirect.LongUrl,
@@ -117,11 +129,11 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
                     body,htmlBody := prepare_renew_email_body(linkRequest,renewUrl)
                     subject := "Renew URL on Catchy.Link"
 
-                    log.Infof(ctx,"-------------------------------------------------------------")
-                    log.Infof(ctx,"To: %s",redirect.Email)
-                    log.Infof(ctx,"Subject: %s\n",subject)
-                    log.Infof(ctx,"%s",body)
-                    log.Infof(ctx,"-------------------------------------------------------------")
+                    //log.Infof(ctx,"-------------------------------------------------------------")
+                    //log.Infof(ctx,"To: %s",redirect.Email)
+                    //log.Infof(ctx,"Subject: %s\n",subject)
+                    //log.Infof(ctx,"%s",body)
+                    //log.Infof(ctx,"-------------------------------------------------------------")
 
                     if Mailgun != nil {
                         // send email message through mailgun
@@ -167,17 +179,84 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
                 // update redirect field to reflect having warned the user (whether failed or not)
                 if retry_tomorrow {
                     redirect.Warn += 1
+                    expiration_warning_retry_count += 1
                 } else {
                     redirect.Warn = 127     // appears to have worked - don't try again
                 }
-                redirect.Expire = now.Unix() + (expiration_warning_days * (60*60*(24+3)))
+                redirect.Expire = now.Unix() + (expiration_warning_days * seconds_per_day)
                 if _,err = datastore.Put(ctx,redirect_key,&redirect); err != nil {
                     log.Errorf(ctx,"error on datastore.Put redirect in cron; err = %v; redirect = %v; redirect_key = %v",err,redirect,redirect_key)
                 }
-
             }
         }
     }
+    log.Infof(ctx,"expirations sent on %d accounts (will retry on %d of those)",expiration_warning_count,expiration_warning_retry_count)
+
+    /***************************************************************************************************************/
+    // remove link redirects that have timed out
+    query = datastore.NewQuery("redirect").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
+    request_keys, err = query.GetAll(ctx, nil)
+    if err != nil {
+        log.Errorf(ctx, "admin_handler redirect query error: %v", err)
+    } else {
+        log.Infof(ctx,"admin_handler redirect delete %d keys",len(request_keys))
+        err := datastore.DeleteMulti(ctx,request_keys)
+        if err != nil {
+            log.Errorf(ctx, "admin_handler redirect DeleteMulti error: %v, request_keys = %v", err,request_keys)
+        }
+    }
+    log.Infof(ctx,"^^^^^^^^^^^^^^^^^^^^^^^^^^^ ADMIN_HANDLER ^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+}
+
+func _create_dummy_redirect(ctx context.Context,i int) {
+    var duration, days_ago int
+    var redirect CatchyLinkRedirect
+    var key *datastore.Key
+
+    // variety of durations
+    if i % 4 == 0 {
+        duration = 1
+    } else if i % 4 == 1 {
+        duration = 7
+    } else if i % 4 == 2 {
+        duration = 31
+    } else if i % 4 == 3 {
+        duration = 365
+    }
+
+    // variety of days ago that the redirections were made
+    days_ago = i % 6
+
+    redirect = CatchyLinkRedirect {
+        LongUrl: "https://google.com/" + strconv.Itoa(i),
+        CatchyUrl: "GoOgLe/" + strconv.Itoa(i),
+        Email: local_debugging_email,
+        Expire: time.Now().Unix() + (int64(duration - days_ago) * seconds_per_day),
+        Duration: int16(duration),
+        Warn: 0,
+    }
+    key = datastore.NewKey(ctx,"redirect",strings.ToLower(redirect.CatchyUrl),0,nil)
+    datastore.Put(ctx,key,&redirect)
+}
+
+func _create_dummy_request(i int) {
+
+
+
+}
+
+
+func build_local_debug_db(w http.ResponseWriter, r *http.Request) {
+    ctx := appengine.NewContext(r)
+
+    for i := 0; i < 100; i++  {
+        _create_dummy_redirect(ctx,i)
+    }
+    for i := 0; i < 30; i++  {
+        _create_dummy_request(i)
+    }
+
+    input_form_with_message(w,"","","<br/><br/>LOCAL DEBUG DB BUILT",nil)
 }
 
 func robots_txt_handler(w http.ResponseWriter, r *http.Request) {

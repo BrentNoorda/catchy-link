@@ -61,7 +61,7 @@ func email_doit_response(ctx context.Context,w http.ResponseWriter,request *Catc
         redirect.CatchyUrl = request.CatchyUrl
         redirect.Email = request.Email
         redirect.Duration = request.Duration
-        redirect.Expire = time.Now().Unix() + (int64(request.Duration) * 60 * 60 * 24)
+        redirect.Expire = time.Now().Unix() + (int64(request.Duration) * seconds_per_day)
         redirect.Warn = 0
 
         _, err = datastore.Put(ctx,key,&redirect)

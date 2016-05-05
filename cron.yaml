@@ -1,4 +1,4 @@
 cron:
 - description: cleanup old link requests
-  url: /-/cleanup_old_link_requests
+  url: /-/cleanup_old_db_stuff
   schedule: every 24 hours
