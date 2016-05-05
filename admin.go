@@ -49,7 +49,6 @@ func prepare_renew_email_body(linkRequest CatchyLinkRequest,renewUrl string) (bo
 func admin_handler(w http.ResponseWriter, r *http.Request) {
     var query *datastore.Query
     var err error
-    var request_keys []*datastore.Key
 
     ctx := appengine.NewContext(r)
 
@@ -63,148 +62,167 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
 
     /***************************************************************************************************************/
     // remove link requests that have timed out
-    query = datastore.NewQuery("linkrequest").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
-    request_keys, err = query.GetAll(ctx, nil)
-    if err != nil {
-        log.Errorf(ctx, "admin_handler linkrequest query error: %v", err)
-    } else {
-        log.Infof(ctx,"admin_handler linkrequest delete %d keys",len(request_keys))
-        err := datastore.DeleteMulti(ctx,request_keys)
-        if err != nil {
-            log.Errorf(ctx, "admin_handler linkrequest DeleteMulti error: %v, request_keys = %v", err,request_keys)
+    var expired_cutoff int64 = time.Now().Unix() - 30    // 30 seconds back so don't delete here while checking there
+    query = datastore.NewQuery("linkrequest").Order("Expire")
+    request_expire_count := 0
+    for q_iter := query.Run(ctx); ; {
+        var request CatchyLinkRequest
+        var request_key *datastore.Key
+        request_key, err = q_iter.Next(&request)
+        if err == datastore.Done {
+            break
+        } else if err != nil {
+            log.Errorf(ctx,"admin_handler request q_iter.Next() err = %v",err)
+            break
+        } else if expired_cutoff <= request.Expire {
+            // have reached the last of the expired requests
+            break
+        } else {
+            request_expire_count += 1
+            if err = datastore.Delete(ctx,request_key); err != nil {
+                log.Errorf(ctx,"admin_handler request Delete request=%v err=%v",request,err)
+            }
         }
     }
+    log.Infof(ctx,"%d linkrequest records expired and deleted",request_expire_count)
 
     /***************************************************************************************************************/
-    // send emails to everyone who is going to expire in expiration_warning_days or less, and has not yet
-    // received a warning email. Also extend their expiration time so they have at least expiration_warning_days
+    // delete all redirect records that have expired -
+    // for those that are about to expire, send emails to everyone who is going to expire in expiration_warning_days or less,
+    // and has not yet received a warning email. Also extend their expiration time so they have at least expiration_warning_days
     // after receiving the email
-    var now time.Time
-    var expiring_soon_cutoff int64
+    var now time.Time = time.Now()
+    expired_cutoff = now.Unix() - 30 // 30 seconds back so don't delete here while checking there
+    var expiring_soon_cutoff int64 = now.Unix() + (expiration_warning_days * seconds_per_day)
 
-    now = time.Now()
-    expiring_soon_cutoff = now.Unix() + (expiration_warning_days * seconds_per_day)
-    query = datastore.NewQuery("redirect").Filter("Expire <",expiring_soon_cutoff)
+    //log.Infof(ctx,"expiring_soon_cutoff = %d",expiring_soon_cutoff)
+
+    query = datastore.NewQuery("redirect").Order("Expire")
     expiration_warning_count := 0
     expiration_warning_retry_count := 0
+    redirect_expire_count := 0
     for q_iter := query.Run(ctx); ; {
         var redirect CatchyLinkRedirect
         var redirect_key *datastore.Key
         redirect_key, err = q_iter.Next(&redirect)
-        if ( err == datastore.Done ) {
+        //log.Infof(ctx,"redirect_key = %v, err = %v",redirect_key,err)
+        if err == datastore.Done {
             break
         } else if err != nil {
-            log.Errorf(ctx,"Error querying redirect for timeouts = %v",err)
+            log.Errorf(ctx,"admin_handler redirect q_iter.Next() err = %v",err)
+            break
+        } else if expiring_soon_cutoff <= redirect.Expire {
+            // have reached the last of the records we want to examine
             break
         } else {
 
-            if (redirect.Duration > 1) && (redirect.Warn < max_email_warning_retries) { // ignore 1-day only or if too many already sent
+            //log.Infof(ctx,"NEXT redirect = %v",redirect)
 
-                expiration_warning_count += 1
-                var request_key *datastore.Key
-                var retry_tomorrow bool = false
-
-                // send an email for this record, giving the user a chance to renew, and then change the record to know
-                // that such an email has already been sent (and set expire up a tad)
-
-                // create CatchyLinkRequest for user to update
-                expire := now.Add( time.Duration(max_email_warning_retries*seconds_per_day*(1000*1000*1000)) )
-                linkRequest := CatchyLinkRequest {
-                    UniqueKey: random_string(55),
-                    LongUrl: redirect.LongUrl,
-                    CatchyUrl: redirect.CatchyUrl,
-                    Email: redirect.Email,
-                    Expire: expire.Unix(),
-                    Duration: redirect.Duration,
+            if (redirect.Expire < expired_cutoff) && ((redirect.Duration <=1) || (redirect.Warn >= max_email_warning_retries)) {
+                // all hope is lost for this record - delete it (don't worry much about memcache, it will reach same conclusion soon
+                redirect_expire_count += 1
+                if err = datastore.Delete(ctx,redirect_key); err != nil {
+                    log.Errorf(ctx,"admin_handler redirect Delete redirect=%v err=%v",redirect,err)
                 }
-                request_key, err = datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
-                if err != nil {
-                    log.Errorf(ctx,"Error putting new CatchyLinkRequest in cron = %v",err)
-                    retry_tomorrow = true
-                } else {
+            } else {
+                // this record hasn't expired yet, but maybe it will soon, so might want to send user a chance to renew
+                if (redirect.Duration > 1) && (redirect.Warn < max_email_warning_retries) { // ignore 1-day only or if too many already sent
 
-                    // send an email that expiration is happening soon
-                    renewUrl := fmt.Sprintf("%s/~/renew/%d/%s",myRootUrl,request_key.IntID(),linkRequest.UniqueKey)
-                    //cancelUrl := fmt.Sprintf("%s/~/cancel/%d/%s",myRootUrl,reqeust_key.IntID(),linkRequest.UniqueKey)
-                    body,htmlBody := prepare_renew_email_body(linkRequest,renewUrl)
-                    subject := "Renew URL on Catchy.Link"
+                    expiration_warning_count += 1
+                    var request_key *datastore.Key
+                    var retry_tomorrow bool = false
 
-                    //log.Infof(ctx,"-------------------------------------------------------------")
-                    //log.Infof(ctx,"To: %s",redirect.Email)
-                    //log.Infof(ctx,"Subject: %s\n",subject)
-                    //log.Infof(ctx,"%s",body)
-                    //log.Infof(ctx,"-------------------------------------------------------------")
+                    // send an email for this record, giving the user a chance to renew, and then change the record to know
+                    // that such an email has already been sent (and set expire up a tad)
 
-                    if Mailgun != nil {
-                        // send email message through mailgun
-                        httpc := urlfetch.Client(ctx)
-
-                        mg := mailgun.NewMailgun(
-                            Mailgun.domain_name,
-                            Mailgun.secret_key,
-                            Mailgun.public_key,
-                        )
-                        mg.SetClient(httpc)
-
-                        message := mg.NewMessage(
-                             /* From */ Mailgun.from,
-                             /* Subject */ subject,
-                             /* Body */ body,
-                             /* To */ redirect.Email,
-                        )
-                        message.SetHtml(htmlBody)
-
-                        _, _, err = mg.Send(message)
-                        if err != nil {
-                            log.Errorf(ctx, "Could not send renew email from Mailgun: %v", err)
-                            retry_tomorrow = true
-                        }
-
+                    // create CatchyLinkRequest for user to update
+                    expire := now.Add( time.Duration(max_email_warning_retries*seconds_per_day*(1000*1000*1000)) )
+                    linkRequest := CatchyLinkRequest {
+                        UniqueKey: random_string(55),
+                        LongUrl: redirect.LongUrl,
+                        CatchyUrl: redirect.CatchyUrl,
+                        Email: redirect.Email,
+                        Expire: expire.Unix(),
+                        Duration: redirect.Duration,
+                    }
+                    request_key, err = datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
+                    if err != nil {
+                        log.Errorf(ctx,"Error putting new CatchyLinkRequest in cron = %v",err)
+                        retry_tomorrow = true
                     } else {
-                        // send email message through app engine
-                        msg := &mail.Message{
-                            Sender:  sender_email_address_if_no_mailgun,
-                            To:      []string{redirect.Email},
-                            Subject: subject,
-                            Body:    body,
-                            HTMLBody:htmlBody,
-                        }
-                        if err = mail.Send(ctx, msg); err != nil {
-                            log.Errorf(ctx, "Could not send renew email: %v", err)
-                            retry_tomorrow = true
+
+                        // send an email that expiration is happening soon
+                        renewUrl := fmt.Sprintf("%s/~/renew/%d/%s",myRootUrl,request_key.IntID(),linkRequest.UniqueKey)
+                        //cancelUrl := fmt.Sprintf("%s/~/cancel/%d/%s",myRootUrl,reqeust_key.IntID(),linkRequest.UniqueKey)
+                        body,htmlBody := prepare_renew_email_body(linkRequest,renewUrl)
+                        subject := "Renew URL on Catchy.Link"
+
+                        //log.Infof(ctx,"-------------------------------------------------------------")
+                        //log.Infof(ctx,"To: %s",redirect.Email)
+                        //log.Infof(ctx,"Subject: %s\n",subject)
+                        //log.Infof(ctx,"%s",body)
+                        //log.Infof(ctx,"-------------------------------------------------------------")
+
+                        if Mailgun != nil {
+                            // send email message through mailgun
+                            httpc := urlfetch.Client(ctx)
+
+                            mg := mailgun.NewMailgun(
+                                Mailgun.domain_name,
+                                Mailgun.secret_key,
+                                Mailgun.public_key,
+                            )
+                            mg.SetClient(httpc)
+
+                            message := mg.NewMessage(
+                                 /* From */ Mailgun.from,
+                                 /* Subject */ subject,
+                                 /* Body */ body,
+                                 /* To */ redirect.Email,
+                            )
+                            message.SetHtml(htmlBody)
+
+                            _, _, err = mg.Send(message)
+                            if err != nil {
+                                log.Errorf(ctx, "Could not send renew email from Mailgun: %v", err)
+                                retry_tomorrow = true
+                            }
+
+                        } else {
+                            // send email message through app engine
+                            msg := &mail.Message{
+                                Sender:  sender_email_address_if_no_mailgun,
+                                To:      []string{redirect.Email},
+                                Subject: subject,
+                                Body:    body,
+                                HTMLBody:htmlBody,
+                            }
+                            if err = mail.Send(ctx, msg); err != nil {
+                                log.Errorf(ctx, "Could not send renew email: %v", err)
+                                retry_tomorrow = true
+                            }
                         }
                     }
-                }
 
-                // update redirect field to reflect having warned the user (whether failed or not)
-                if retry_tomorrow {
-                    redirect.Warn += 1
-                    expiration_warning_retry_count += 1
-                } else {
-                    redirect.Warn = 127     // appears to have worked - don't try again
-                }
-                redirect.Expire = now.Unix() + (expiration_warning_days * seconds_per_day)
-                if _,err = datastore.Put(ctx,redirect_key,&redirect); err != nil {
-                    log.Errorf(ctx,"error on datastore.Put redirect in cron; err = %v; redirect = %v; redirect_key = %v",err,redirect,redirect_key)
+                    // update redirect field to reflect having warned the user (whether failed or not)
+                    if retry_tomorrow {
+                        redirect.Warn += 1
+                        expiration_warning_retry_count += 1
+                    } else {
+                        redirect.Warn = 127     // appears to have worked - don't try again
+                    }
+                    redirect.Expire = now.Unix() + (expiration_warning_days * seconds_per_day)
+                    if _,err = datastore.Put(ctx,redirect_key,&redirect); err != nil {
+                        log.Errorf(ctx,"error on datastore.Put redirect in cron; err = %v; redirect = %v; redirect_key = %v",err,redirect,redirect_key)
+                    }
+
                 }
             }
         }
     }
-    log.Infof(ctx,"expirations sent on %d accounts (will retry on %d of those)",expiration_warning_count,expiration_warning_retry_count)
+    log.Infof(ctx,"%d redirect records expired and deleted",redirect_expire_count)
+    log.Infof(ctx,"expiration warnings sent on %d accounts (will retry on %d of those)",expiration_warning_count,expiration_warning_retry_count)
 
-    /***************************************************************************************************************/
-    // remove link redirects that have timed out
-    query = datastore.NewQuery("redirect").Filter("Expire <",time.Now().Unix()-30).KeysOnly() // 30 second back so don't delete here while checking there
-    request_keys, err = query.GetAll(ctx, nil)
-    if err != nil {
-        log.Errorf(ctx, "admin_handler redirect query error: %v", err)
-    } else {
-        log.Infof(ctx,"admin_handler redirect delete %d keys",len(request_keys))
-        err := datastore.DeleteMulti(ctx,request_keys)
-        if err != nil {
-            log.Errorf(ctx, "admin_handler redirect DeleteMulti error: %v, request_keys = %v", err,request_keys)
-        }
-    }
     log.Infof(ctx,"^^^^^^^^^^^^^^^^^^^^^^^^^^^ ADMIN_HANDLER ^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 }
 

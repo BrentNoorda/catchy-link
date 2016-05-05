@@ -24,10 +24,12 @@ var disallowed_roots = [...]string {
 }
 
 type CatchyLinkRequest struct {
-    UniqueKey string
-    LongUrl, CatchyUrl, Email string
-    Expire   int64
-    Duration int16  // original duration in days
+    UniqueKey   string      `datastore:",noindex"`
+    LongUrl     string      `datastore:",noindex"`
+    CatchyUrl   string      `datastore:",noindex"`
+    Email       string      `datastore:",noindex"`
+    Expire      int64
+    Duration    int16       `datastore:",noindex"`  // duration in days
 }
 
 type FormInput struct {
@@ -35,10 +37,13 @@ type FormInput struct {
 }
 
 type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
-    LongUrl, CatchyUrl, Email string
-    Expire   int64  // when this expires, will be extended at least to expiration_warning_days when warning email is sent out
-    Duration int16  // original duration in days
-    Warn     int8   // count how many times a warning email has gone out
+    LongUrl     string      `datastore:",noindex"`
+    CatchyUrl   string      `datastore:",noindex"`
+    Email       string      `datastore:",noindex"`
+    Expire      int64                                   // when this expires, will be extended at least to
+                                                        // expiration_warning_days when warning email is sent out
+    Duration    int16       `datastore:",noindex"`      // original duration in days
+    Warn        int8        `datastore:",noindex"`      // count how many times a warning email has gone out
 }
 
 ///////// EMAIL /////////
