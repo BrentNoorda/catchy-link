@@ -37,9 +37,9 @@ func prepare_renew_email_body(linkRequest CatchyLinkRequest,renewUrl string) (bo
                "You have a memorable URL on catchy.link that will be expiring soon. The link:<br/><br/>\n" +
                " &nbsp; " + noUrlLink + "<br/><br/>\n" +
                "redirects to:<br/><br/>\n" +
-               " &nbsp; <a href=\"" + linkRequest.LongUrl + "\">" + linkRequest.LongUrl + "<a><br/><br/>\n" +
+               " &nbsp; <a href=\"" + linkRequest.LongUrl + "\">" + linkRequest.LongUrl + "</a><br/><br/>\n" +
                "To RENEW this catchy.link, click on the following button:<br/><br/>\n" +
-               " &nbsp; <a href=\"" + renewUrl + "\"><button style=\"background-color:#dddddd;\"><font size=\"+1\">renew catchy.link</font></button><a><br/><br/><br/>\n" +
+               " &nbsp; <a href=\"" + renewUrl + "\"><button style=\"background-color:#dddddd;\"><font size=\"+1\">renew catchy.link</font></button></a><br/><br/><br/>\n" +
                "<font size=\"-2\">if that button fails, copy and paste this url into your browser: " + renewUrl + "</font>" +
                "</td></tr></table>"
 
