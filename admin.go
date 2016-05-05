@@ -75,6 +75,23 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
         }
     }
 
+    /* log all records */
+    log.Infof(ctx,"LOG ALL RECORD START")
+    query = datastore.NewQuery("redirect")
+    for q_iter := query.Run(ctx); ; {
+        var redirect CatchyLinkRedirect
+        var redirect_key *datastore.Key
+        redirect_key, err = q_iter.Next(&redirect)
+        if err == nil {
+            log.Infof(ctx,"found redirect_key = %v, and record = %v",redirect_key,redirect)
+        } else {
+            log.Infof(ctx,"break because err = %v",err)
+            break
+        }
+    }
+    log.Infof(ctx,"LOG ALL RECORDS END")
+
+
     /***************************************************************************************************************/
     // send emails to everyone who is going to expire in expiration_warning_days or less, and has not yet
     // received a warning email. Also extend their expiration time so they have at least expiration_warning_days
@@ -84,6 +101,7 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
 
     now = time.Now()
     expiring_soon_cutoff = now.Unix() + (expiration_warning_days * seconds_per_day)
+    log.Infof(ctx,"expiring_soon_cutoff = %d",expiring_soon_cutoff)
     query = datastore.NewQuery("redirect").Filter("Expire <",expiring_soon_cutoff)
     expiration_warning_count := 0
     expiration_warning_retry_count := 0
@@ -91,13 +109,15 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
         var redirect CatchyLinkRedirect
         var redirect_key *datastore.Key
         redirect_key, err = q_iter.Next(&redirect)
+        log.Infof(ctx,"redirect_key = %v, err = %v",redirect_key,err)
         if ( err == datastore.Done ) {
             break
         } else if err != nil {
-            log.Errorf(ctx,"Error querying redirect for timeouts = %v",err)
+            log.Errorf(ctx,"admin_handler redirect Error querying redirect for timeouts = %v",err)
             break
         } else {
 
+            log.Infof(ctx,"NEXT redirect = %v",redirect)
             if (redirect.Duration > 1) && (redirect.Warn < max_email_warning_retries) { // ignore 1-day only or if too many already sent
 
                 expiration_warning_count += 1
