@@ -4,7 +4,9 @@ import (
     "fmt"
     "time"
     "strings"
+    "strconv"
     "net/http"
+    "golang.org/x/net/context"
     "google.golang.org/appengine"
     "google.golang.org/appengine/log"
     "google.golang.org/appengine/mail"
@@ -178,6 +180,57 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
             }
         }
     }
+}
+
+func _create_dummy_redirect(ctx context.Context,i int) {
+    var duration, days_ago int
+    var redirect CatchyLinkRedirect
+    var key *datastore.Key
+
+    // variety of durations
+    if i % 4 == 0 {
+        duration = 1
+    } else if i % 4 == 1 {
+        duration = 7
+    } else if i % 4 == 2 {
+        duration = 31
+    } else if i % 4 == 3 {
+        duration = 365
+    }
+
+    // variety of days ago that the redirections were made
+    days_ago = i % 6
+
+    redirect = CatchyLinkRedirect {
+        LongUrl: "https://google.com/" + strconv.Itoa(i),
+        CatchyUrl: "GoOgLe/" + strconv.Itoa(i),
+        Email: local_debugging_email,
+        Expire: time.Now().Unix() + (int64(duration - days_ago) * seconds_per_day),
+        Duration: int16(duration),
+        Warn: 0,
+    }
+    key = datastore.NewKey(ctx,"redirect",strings.ToLower(redirect.CatchyUrl),0,nil)
+    datastore.Put(ctx,key,&redirect)
+}
+
+func _create_dummy_request(i int) {
+
+
+
+}
+
+
+func build_local_debug_db(w http.ResponseWriter, r *http.Request) {
+    ctx := appengine.NewContext(r)
+
+    for i := 0; i < 100; i++  {
+        _create_dummy_redirect(ctx,i)
+    }
+    for i := 0; i < 30; i++  {
+        _create_dummy_request(i)
+    }
+
+    input_form_with_message(w,"","","<br/><br/>LOCAL DEBUG DB BUILT",nil)
 }
 
 func robots_txt_handler(w http.ResponseWriter, r *http.Request) {

@@ -10,6 +10,8 @@ const max_email_warning_retries = 3 // if cannot successfully email after this m
 
 var seconds_per_day int64 = 60 * 60 * 24  // when debugging or developing locally, this number may be reduced
                                           // so we can wait minutes (for example) for stuff to time out instead of days
+var local_debugging bool = false        // init() function may change this based on environment variables
+var local_debugging_email string = "bad_email_address" // but good email here via environment variables
 
 var disallowed_roots = [...]string {
     "index.",
