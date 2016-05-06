@@ -257,6 +257,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         Email: form.Email,
         Expire: expire.Unix(),
         Duration: int16(duration),
+        OptF: 0,
     }
     var key *datastore.Key
     key, err = datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
