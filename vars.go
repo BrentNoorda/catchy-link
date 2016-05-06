@@ -30,6 +30,7 @@ type CatchyLinkRequest struct {
     Email       string      `datastore:",noindex"`
     Expire      int64
     Duration    int16       `datastore:",noindex"`  // duration in days
+    OptF        int16       `datastore:",noindex"`  // Option flags for how to treat this link
 }
 
 type FormInput struct {
@@ -43,6 +44,7 @@ type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl
     Expire      int64                                   // when this expires, will be extended at least to
                                                         // expiration_warning_days when warning email is sent out
     Duration    int16       `datastore:",noindex"`      // original duration in days
+    OptF        int16       `datastore:",noindex"`      // Option flags for how to treat this link
     Warn        int8        `datastore:",noindex"`      // count how many times a warning email has gone out
 }
 

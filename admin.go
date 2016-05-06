@@ -144,6 +144,7 @@ func admin_handler(w http.ResponseWriter, r *http.Request) {
                         Email: redirect.Email,
                         Expire: expire.Unix(),
                         Duration: redirect.Duration,
+                        OptF: redirect.OptF,
                     }
                     request_key, err = datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)
                     if err != nil {
@@ -251,6 +252,7 @@ func _create_dummy_redirect(ctx context.Context,i int) {
         Email: local_debugging_email,
         Expire: time.Now().Unix() + (int64(duration - days_ago) * seconds_per_day),
         Duration: int16(duration),
+        OptF: 0,
         Warn: 0,
     }
     key = datastore.NewKey(ctx,"redirect",strings.ToLower(redirect.CatchyUrl),0,nil)
