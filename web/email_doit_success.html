@@ -10,12 +10,12 @@
   </head>
   <body>
     <form action="/" method="post">
-      <table width="97%" class="middle-block" align="center">
+      <table class="middle-block">
         <tr>
-          <td style="padding-left:0;" width="5%">
+          <td class="left-of-2" style="padding-left:0;">
             <h2>catchy.link</h2>
           </td>
-          <td width="95%">
+          <td class="right-of-3">
             <h3>Turn a long internet url into something that is easy to remember.</h3>
           </td>
         </tr>
@@ -26,8 +26,12 @@
             now points to:<br/><br/>
             <a href="{{longurl_a}}" style="margin-left:2em;">{{longurl_t}}</a><br/><br/>
             This link will be valid for about {{duration}}. You can alter this catchy.link at any time using this same email address.
-            <span {{reminder}}>You will be emailed a reminder a day or two before this expires, in case you want to renew the URL.</span>
-            <br/><br/><a href="/" style="text-decoration:none;"><button type="button" class="middle-button">create another catchy.link</button></a>
+            <span id="reminder">You will be emailed a reminder a day or two before this expires, in case you want to renew the URL.</span>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align:center;padding-top:2em;">
+            <a href="/" class="button-link">create another catchy.link</a>
           </td>
         </tr>
       </table>

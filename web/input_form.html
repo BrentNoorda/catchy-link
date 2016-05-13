@@ -20,7 +20,7 @@
   </head>
   <body>
     <form action="/" method="post">
-      <table width="97%" class="middle-block" align="center">
+      <table class="middle-block">
         <tr>
           <td style="padding-left:0;">
             <h2>catchy.link</h2>
@@ -32,23 +32,23 @@
           </td>
         </tr>
         <tr>
-          <td align="right">
+          <td class="align-right">
             <label for="longurl">Long URL</label>
           </td>
           <td colspan="2" class="input-cell">
-            <input type="text" id="longurl" name="longurl" {{longurl-value}} />
+            <input type="text" id="longurl" name="longurl" />
             <span class="errormsg" style="{{longurl-style}}"><br/>{{longurl-errormsg}}</span>
           </td>
         </tr>
         <tr>
-          <td width="5%" align="right">
+          <td class="align-right left-of-2">
             <label for="catchyurl">Catchy URL</label>
           </td>
-          <td width="5%">
+          <td class="middle-of-2">
             <span style="opacity:0.5;">{{catchylink_root_url}}/</span>
           </td>
-          <td width="90%" style="padding-left:0;" class="input-cell">
-            <input type="text" id="catchyurl" name="catchyurl" {{catchyurl-value}} />
+          <td style="padding-left:0;" class="input-cell right-of-3">
+            <input type="text" id="catchyurl" name="catchyurl" />
           </td>
         </tr>
         <tr class="errormsg" style="{{catchyurl-table-style}}">
@@ -60,25 +60,25 @@
           </td>
         </tr>
         <tr>
-          <td align="right">
-            <label for="duration">Duration</label>
+          <td class="align-right">
+            <label>Duration</label>
           </td>
           <td colspan="2">
             <select name="duration">
-              <option value="1" {{selected-1}}>1 day</option>
-              <option value="7" {{selected-7}} selected="selected">1 week</option>
-              <option value="31" {{selected-31}}>1 month</option>
-              <option value="365" {{selected-365}}>1 year</option>
+              <option value="1">1 day</option>
+              <option value="7" selected="selected">1 week</option>
+              <option value="31">1 month</option>
+              <option value="365">1 year</option>
             </select>
             <span style="opacity:0.5;">you will be emailed a renew option for any duration longer than 1 day</span>
           </td>
         </tr>
         <tr>
-          <td align="right">
+          <td class="align-right">
             <label for="youremail">Your Email</label>
           </td>
           <td colspan="2" class="input-cell">
-            <input type="text" id="youremail" name="youremail" {{youremail-value}} />
+            <input type="text" id="youremail" name="youremail" />
             <span class="errormsg" style="{{youremail-style}}"><br/>{{youremail-errormsg}}</span>
           </td>
         </tr>
@@ -87,7 +87,7 @@
             &nbsp;
           </td>
           <td colspan="2">
-            <button type="submit">create catchy.link</button>
+            <button type="submit" class="button-link">create catchy.link</button>
           </td>
         </tr>
       </table>
@@ -98,8 +98,6 @@
       <a href="https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing" style="margin-left:2em">https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing</a>
       <br/><br/>or, if you want a more memorable (&#8220;catchier&#8221;) address:<br/><br/>
       <a href="http://catchy.link/CatchyLinkManual" style="margin-left:2em">catchy.link/CatchyLinkManual</a>
-      <br/><br/><i>or, to see the discussion on Hacker News:<br/><br/>
-      <a href="http://catchy.link/ShowHN/CatchyLink" style="margin-left:2em">catchy.link/ShowHN/CatchyLink</a></i>
     </div>
   </body>
 </html>

@@ -58,7 +58,7 @@ func input_form_success(w http.ResponseWriter,linkRequest CatchyLinkRequest,send
     page = strings.Replace(page,"{{longurl_t}}",html.EscapeString(linkRequest.LongUrl),1)
     page = strings.Replace(page,"{{shorturl_t}}",html.EscapeString(linkRequest.CatchyUrl),1)
     page = strings.Replace(page,"{{youremail}}",html.EscapeString(linkRequest.Email),1)
-    page = strings.Replace(page,"{{myemail}}",sender_email_address,1)
+    page = strings.Replace(page,"{{myemail}}",html.EscapeString(sender_email_address),1)
     fmt.Fprint(w,page)
 }
 
@@ -86,7 +86,7 @@ func prepare_request_email_body(linkRequest CatchyLinkRequest, doitUrl string) (
                "to<br/><br/>\n" +
                " &nbsp; <a href=\"" + linkRequest.LongUrl + "\">" + linkRequest.LongUrl + "</a><br/><br/>\n" +
                "To VERIFY this url request, click on the following button:<br/><br/>\n" +
-               " &nbsp; <a href=\"" + doitUrl + "\"><button style=\"background-color:#dddddd;\"><font size=\"+1\">create catchy.link</font></button></a><br/><br/><br/>\n" +
+               " &nbsp; <a href=\"" + doitUrl + "\"><button style=\"background-color:#dddddd;\"><font size=\"+1\">verify catchy.link</font></button></a><br/><br/><br/>\n" +
                "<font size=\"-2\">if that button fails, copy and paste this url into your browser: " + doitUrl + "</font>" +
                "</td></tr></table>"
 
@@ -107,12 +107,12 @@ func input_form_with_message(w http.ResponseWriter,fieldname string,errormsg str
     page = strings.Replace(page,"<!--etc-->",extramsg,1)
 
     if form != nil {
-        page = strings.Replace(page,"selected=\"selected\"","",1)
-        page = strings.Replace(page,"{{selected-" + form.Duration + "}}","selected=\"selected\"",1)
+        page = strings.Replace(page," value=\"7\" selected=\"selected\""," value=\"7\"",1)
+        page = strings.Replace(page," value=\"" + form.Duration + "\""," value=\"" + form.Duration + "\" selected=\"selected\"",1)
 
-        page = strings.Replace(page,"{{longurl-value}}","value=\"" + html.EscapeString(form.LongUrl) + "\"",1)
-        page = strings.Replace(page,"{{catchyurl-value}}","value=\"" + html.EscapeString(form.CatchyUrl) + "\"",1)
-        page = strings.Replace(page,"{{youremail-value}}","value=\"" + html.EscapeString(form.Email) + "\"",1)
+        page = strings.Replace(page," name=\"longurl\" "," name=\"longurl\" value=\"" + html.EscapeString(form.LongUrl) + "\" ",1)
+        page = strings.Replace(page," name=\"catchyurl\" "," name=\"catchyurl\" value=\"" + html.EscapeString(form.CatchyUrl) + "\" ",1)
+        page = strings.Replace(page," name=\"youremail\" "," name=\"youremail\" value=\"" + html.EscapeString(form.Email) + "\" ",1)
     }
 
     fmt.Fprint(w,page)
