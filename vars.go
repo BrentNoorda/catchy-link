@@ -23,6 +23,45 @@ var disallowed_roots = [...]string {
     "_ah/",
 }
 
+// OptF flags are 16 bits to encode various pieced of information
+// some bits are the modes (automatic, prompt, promptemail, embed)
+const mode_automatic    = 0x0000
+const mode_embed        = 0x0001
+const mode_prompt       = 0x0002
+const mode_prompt_email = 0x0003
+// bit whether this allows searching by catchy.link name
+const search_by_name     = 0x0100
+// bit whether this allows showing catchy.links based on email address
+const search_by_email    = 0x0200
+
+func set_link_mode(OptF int16,mode int16) int16 {
+    return (OptF & 0x7FF0) | mode
+}
+func get_link_mode(OptF int16) int16 {
+    return OptF & 0x000F
+}
+func set_search_by_name(OptF int16,search bool) int16 {
+    if search {
+        return OptF | search_by_name
+    } else {
+        return OptF & ^search_by_name
+    }
+}
+func get_search_by_name(OptF int16) bool {
+    return (OptF & search_by_name) != 0
+}
+func set_search_by_email(OptF int16,search bool) int16 {
+    if search {
+        return OptF | search_by_email
+    } else {
+        return OptF & ^search_by_email
+    }
+}
+func get_search_by_email(OptF int16) bool {
+    return (OptF & search_by_email) != 0
+}
+
+
 type CatchyLinkRequest struct {
     UniqueKey   string      `datastore:",noindex"`
     LongUrl     string      `datastore:",noindex"`
@@ -34,7 +73,7 @@ type CatchyLinkRequest struct {
 }
 
 type FormInput struct {
-    LongUrl, CatchyUrl, Email, Duration string
+    LongUrl, CatchyUrl, Email, Duration, Mode, AdvancedMenu, SearchName, SearchEmail string
 }
 
 type CatchyLinkRedirect struct {  // key for this DB is lowercase-CatchyUrl

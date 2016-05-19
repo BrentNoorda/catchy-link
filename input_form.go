@@ -100,15 +100,31 @@ func input_form(w http.ResponseWriter) {
 func input_form_with_message(w http.ResponseWriter,fieldname string,errormsg string,extramsg string,form *FormInput) {
     var page string
 
-    page = strings.Replace(input_form_html(),"{{"+fieldname+"-style}}","display:inline;",1)
-    page = strings.Replace(page,"{{"+fieldname+"-table-style}}","display:table-row;",1)
-    page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
+    if fieldname != "" {
+        page = strings.Replace(input_form_html(),"{{"+fieldname+"-style}}","display:inline;",1)
+        page = strings.Replace(page,"{{"+fieldname+"-table-style}}","display:table-row;",1)
+        page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
+        page = strings.Replace(page,"$(\"#longurl\").focus();\n","$(\"#" + fieldname + "\").focus();\n",1)
+    }
 
     page = strings.Replace(page,"<!--etc-->",extramsg,1)
 
     if form != nil {
         page = strings.Replace(page," value=\"7\" selected=\"selected\""," value=\"7\"",1)
         page = strings.Replace(page," value=\"" + form.Duration + "\""," value=\"" + form.Duration + "\" selected=\"selected\"",1)
+
+        page = strings.Replace(page," value=\"automatic\" selected=\"selected\""," value=\"automatic\"",1)
+        page = strings.Replace(page," value=\"" + form.Mode + "\""," value=\"" + form.Mode + "\" selected=\"selected\"",1)
+
+        page = strings.Replace(page," value=\"srchname-on\" selected=\"selected\""," value=\"srchname-on\"",1)
+        page = strings.Replace(page," value=\"" + form.SearchName + "\""," value=\"" + form.SearchName + "\" selected=\"selected\"",1)
+
+        page = strings.Replace(page," value=\"srchemail-off\" selected=\"selected\""," value=\"srchemail-off\"",1)
+        page = strings.Replace(page," value=\"" + form.SearchEmail + "\""," value=\"" + form.SearchEmail + "\" selected=\"selected\"",1)
+
+        if form.AdvancedMenu == "1" {
+            page = strings.Replace(page," name=\"advanced-menu\" value=\"0\" "," name=\"advanced-menu\" value=\"1\" ",1)
+        }
 
         page = strings.Replace(page," name=\"longurl\" "," name=\"longurl\" value=\"" + html.EscapeString(form.LongUrl) + "\" ",1)
         page = strings.Replace(page," name=\"catchyurl\" "," name=\"catchyurl\" value=\"" + html.EscapeString(form.CatchyUrl) + "\" ",1)
@@ -144,6 +160,27 @@ func does_this_catchy_url_belong_to_someone_else(ctx context.Context, lCatchyUrl
     }
 }
 
+func _get_optf_from_form(ctx context.Context,form *FormInput) int16 {
+    var optf int16 = 0
+
+    if form.Mode =="embed" {
+        optf = set_link_mode(optf,mode_embed)
+    } else if form.Mode =="prompt" {
+        optf = set_link_mode(optf,mode_prompt)
+    } else if form.Mode =="promptemail" {
+        optf = set_link_mode(optf,mode_prompt_email)
+    } else {
+        optf = set_link_mode(optf,mode_automatic)
+    }
+
+    optf = set_search_by_name(optf,form.SearchName != "srchname-off")
+
+    optf = set_search_by_email(optf,form.SearchEmail == "srchemail-on")
+
+    return optf
+}
+
+
 func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     var errormsg string
     var err error
@@ -156,8 +193,24 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     form.CatchyUrl = strings.TrimSpace(r.PostFormValue("catchyurl"))
     form.Email = strings.TrimSpace(r.PostFormValue("youremail"))
     form.Duration = r.PostFormValue("duration")
-    if form.Duration != "1" && form.Duration != "7" && form.Duration != "31" && form.Duration != "365" {
+    if form.Duration != "1" && form.Duration != "31" && form.Duration != "365" {
         form.Duration = "7"
+    }
+    form.Mode = r.PostFormValue("mode")
+    if form.Mode != "automatic" && form.Mode != "prompt" && form.Mode != "promptemail" && form.Mode != "embed" {
+        form.Mode = "automatic"
+    }
+    form.AdvancedMenu = r.PostFormValue("advanced-menu")
+    if form.AdvancedMenu != "1" {
+        form.AdvancedMenu = "0"
+    }
+    form.SearchName = r.PostFormValue("search-name")
+    if form.SearchName != "srchname-off" {
+        form.SearchName = "srchname-on"
+    }
+    form.SearchEmail = r.PostFormValue("search-email")
+    if form.SearchEmail != "srchemail-on" {
+        form.SearchEmail = "srchemail-off"
     }
 
     // remove / from the end of the CatchyUrl (they cause problems)
@@ -248,6 +301,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
     }
 
     // create CatchyLinkRequest and inform user about it
+
     expire := now.Add( time.Duration(RequestTimeMin*60*(1000*1000*1000)) )
     duration,_ := strconv.Atoi(form.Duration)
     linkRequest := CatchyLinkRequest {
@@ -257,7 +311,7 @@ func post_new_catchy_link(w http.ResponseWriter, r *http.Request) {
         Email: form.Email,
         Expire: expire.Unix(),
         Duration: int16(duration),
-        OptF: 0,
+        OptF: _get_optf_from_form(ctx,&form),
     }
     var key *datastore.Key
     key, err = datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "linkrequest", nil), &linkRequest)

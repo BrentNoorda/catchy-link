@@ -24,7 +24,7 @@ func replace_all_repeatedly(s, old, new string) string {
     return s
 }
 
-func read_min_web_file(filespec string,css string) string {
+func read_min_web_file(filespec string,replace_css, replace_root_url, replace_google_analytics bool) string {
     var ret string
     bytes, err := ioutil.ReadFile("web/" + filespec)
     if err != nil {
@@ -36,9 +36,15 @@ func read_min_web_file(filespec string,css string) string {
         ret = replace_all_repeatedly(ret,"  "," ")
         ret = strings.Replace(ret,"\n ","\n",-1)
         ret = strings.Replace(ret," \n","\n",-1)
-        if css != "" {
+        if replace_css {
             ret = strings.Replace(ret,"<link rel=\"stylesheet\" media=\"screen\" type=\"text/css\" href=\"catchylink.css\">",
-                                  "<style media=\"screen\" type=\"text/css\">\n"+css+"\n</style>",1)
+                                  "<style media=\"screen\" type=\"text/css\">\n"+catchylink_css()+"\n</style>",1)
+        }
+        if replace_root_url {
+            ret = strings.Replace(ret,"{{catchylink_root_url}}",myRootUrl,-1)
+        }
+        if replace_google_analytics {
+            ret = strings.Replace(ret,"<!--google-analytics-->",google_analytics_txt(),1)
         }
     }
     return ret
@@ -50,10 +56,14 @@ var _input_form_success_html string = ""
 var _email_doit_success_html string = ""
 var _notfound_404_form_html string = ""
 var _catchylink_css string = ""
+var _google_analytics_txt string = ""
+var _embedded_iframe_html string = ""
+var _prompt_redirect_html string = ""
+var _prompt_redirect_with_email_html string = ""
 
 func input_form_html() string {
     if _input_form_html == "" {
-        text := strings.Replace(read_min_web_file("input_form.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+        text := read_min_web_file("input_form.html",true,true,true)
         if local_debugging {
             text = strings.Replace(text,"</body>","<a style=\"float:right;color:#eeeeee;\" href=\"/~/build-local-debug-db\">BUILD</a></body>",1)
         }
@@ -64,32 +74,60 @@ func input_form_html() string {
 
 func input_form_success_html() string {
     if _input_form_success_html == "" {
-        _input_form_success_html = strings.Replace(read_min_web_file("input_form_success.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+        _input_form_success_html = read_min_web_file("input_form_success.html",true,true,true)
     }
     return _input_form_success_html
 }
 
 func email_doit_success_html() string {
     if _email_doit_success_html == "" {
-        _email_doit_success_html = strings.Replace(read_min_web_file("email_doit_success.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+        _email_doit_success_html = read_min_web_file("email_doit_success.html",true,true,true)
     }
     return _email_doit_success_html
 }
 
 func notfound_404_form_html() string {
     if _notfound_404_form_html == "" {
-        _notfound_404_form_html = strings.Replace(read_min_web_file("notfound_404_form.html",catchylink_css()),"{{catchylink_root_url}}",myRootUrl,-1)
+        _notfound_404_form_html = read_min_web_file("notfound_404_form.html",true,true,true)
     }
     return _notfound_404_form_html
 }
 
+func prompt_redirect_html() string {
+    if _prompt_redirect_html == "" {
+        _prompt_redirect_html = read_min_web_file("prompt_redirect.html",true,true,true)
+    }
+    return _prompt_redirect_html
+}
+
+func prompt_redirect_with_email_html() string {
+    if _prompt_redirect_with_email_html == "" {
+        _prompt_redirect_with_email_html = read_min_web_file("prompt_redirect_with_email.html",true,true,true)
+    }
+    return _prompt_redirect_with_email_html
+}
+
 func catchylink_css() string {
     if _catchylink_css == "" {
-        css := read_min_web_file("catchylink.css","")
+        css := read_min_web_file("catchylink.css",false,false,false)
         css = strings.Replace(css,": ",":",-1)
         _catchylink_css = css
     }
     return _catchylink_css
+}
+
+func google_analytics_txt() string {
+    if _google_analytics_txt == "" {
+        _google_analytics_txt = read_min_web_file("google_analytics.txt",false,false,false)
+    }
+    return _google_analytics_txt
+}
+
+func embedded_iframe_html() string {
+    if _embedded_iframe_html == "" {
+        _embedded_iframe_html = read_min_web_file("embedded_iframe.html",false,false,false)
+    }
+    return _embedded_iframe_html
 }
 
 func init() {
@@ -128,6 +166,8 @@ func init() {
     if local_debugging {
         http.HandleFunc("/~/build-local-debug-db", build_local_debug_db)
     }
+    http.HandleFunc("/~/embtst", test_embed_handler)
     http.HandleFunc("/~/", email_response_handler)
     http.HandleFunc("/", redirect_handler)
+    //http.HandleFunc("/~/onetime_db_fixup_pefqpqpouqwifqpfiqfhqwfqfuiqef", onetime_db_fixup)
 }

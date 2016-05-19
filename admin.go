@@ -231,6 +231,7 @@ func _create_dummy_redirect(ctx context.Context,i int) {
     var duration, days_ago int
     var redirect CatchyLinkRedirect
     var key *datastore.Key
+    var default_optf int16
 
     // variety of durations
     if i % 4 == 0 {
@@ -246,13 +247,17 @@ func _create_dummy_redirect(ctx context.Context,i int) {
     // variety of days ago that the redirections were made
     days_ago = i % 6
 
+    default_optf = set_link_mode(0,mode_automatic)
+    default_optf = set_search_by_name(default_optf,true)
+    default_optf = set_search_by_email(default_optf,false)
+
     redirect = CatchyLinkRedirect {
         LongUrl: "https://google.com/" + strconv.Itoa(i),
         CatchyUrl: "GoOgLe/" + strconv.Itoa(i),
         Email: local_debugging_email,
         Expire: time.Now().Unix() + (int64(duration - days_ago) * seconds_per_day),
         Duration: int16(duration),
-        OptF: 0,
+        OptF: default_optf,
         Warn: 0,
     }
     key = datastore.NewKey(ctx,"redirect",strings.ToLower(redirect.CatchyUrl),0,nil)
@@ -264,7 +269,6 @@ func _create_dummy_request(i int) {
 
 
 }
-
 
 func build_local_debug_db(w http.ResponseWriter, r *http.Request) {
     ctx := appengine.NewContext(r)
@@ -278,6 +282,62 @@ func build_local_debug_db(w http.ResponseWriter, r *http.Request) {
 
     input_form_with_message(w,"","","<br/><br/>LOCAL DEBUG DB BUILT",nil)
 }
+
+//change this function, and the link to call it (to some unguessable string) when changes need to be made
+func onetime_db_fixup(w http.ResponseWriter, r *http.Request) {
+    var query *datastore.Query
+    var err error
+    ctx := appengine.NewContext(r)
+
+    query = datastore.NewQuery("redirect").Order("Expire")
+    for q_iter := query.Run(ctx); ; {
+        var redirect CatchyLinkRedirect
+        var redirect_key *datastore.Key
+        redirect_key, err = q_iter.Next(&redirect)
+
+        if err == datastore.Done {
+            break
+        } else if err != nil {
+            log.Errorf(ctx,"onetime_db_fixup redirect q_iter.Next() err = %v",err)
+            break
+        } else {
+            redirect.OptF = 0
+            redirect.OptF = set_link_mode(redirect.OptF,mode_automatic)
+            redirect.OptF = set_search_by_name(redirect.OptF,true)
+            redirect.OptF = set_search_by_email(redirect.OptF,false)
+
+            if _,err = datastore.Put(ctx,redirect_key,&redirect); err != nil {
+                log.Errorf(ctx,"error on datastore.Put redirect in onetime_db_fixup; err = %v; redirect = %v; redirect_key = %v",err,redirect,redirect_key)
+            }
+        }
+    }
+
+    query = datastore.NewQuery("linkrequest").Order("Expire")
+    for q_iter := query.Run(ctx); ; {
+        var request CatchyLinkRequest
+        var request_key *datastore.Key
+        request_key, err = q_iter.Next(&request)
+
+        if err == datastore.Done {
+            break
+        } else if err != nil {
+            log.Errorf(ctx,"onetime_db_fixup request q_iter.Next() err = %v",err)
+            break
+        } else {
+            request.OptF = 0
+            request.OptF = set_link_mode(request.OptF,mode_automatic)
+            request.OptF = set_search_by_name(request.OptF,true)
+            request.OptF = set_search_by_email(request.OptF,false)
+
+            if _,err = datastore.Put(ctx,request_key,&request); err != nil {
+                log.Errorf(ctx,"error on datastore.Put request in onetime_db_fixup; err = %v; request = %v; request_key = %v",err,request,request_key)
+            }
+        }
+    }
+
+    fmt.Fprint(w, "onetime_db_fixup is complete\r\n")
+}
+
 
 func robots_txt_handler(w http.ResponseWriter, r *http.Request) {
     fmt.Fprint(w, "user-agent: *\r\nAllow: /$\r\nDisallow: /\r\n")

@@ -27,13 +27,53 @@ func email_doit_success(w http.ResponseWriter,linkRequest *CatchyLinkRequest) {
     fmt.Fprint(w,page)
 }
 
-func email_renew_response(ctx context.Context,w http.ResponseWriter,request *CatchyLinkRequest) {
-    form := FormInput{
+func build_FormInput_from_CatchyLinkRequest(request *CatchyLinkRequest) FormInput {
+    var Mode, AdvancedMenu, SearchName, SearchEmail string
+    var mode int16
+
+    mode = get_link_mode(request.OptF)
+    if mode == mode_embed {
+        Mode = "embed"
+    } else if mode == mode_prompt {
+        Mode = "prompt"
+    } else if mode == mode_prompt_email {
+        Mode = "promptemail"
+    } else {
+        Mode = "automatic"
+    }
+
+    if get_search_by_name(request.OptF) {
+        SearchName = "srchname-on"
+    } else {
+        SearchName = "srchname-off"
+    }
+
+    if get_search_by_email(request.OptF) {
+        SearchEmail = "srchemail-on"
+    } else {
+        SearchEmail = "srchemail-off"
+    }
+
+    if (mode != mode_automatic) || !get_search_by_name(request.OptF) || get_search_by_email(request.OptF) {
+        AdvancedMenu = "1"
+    } else {
+        AdvancedMenu = "0"
+    }
+
+    return FormInput {
         LongUrl: request.LongUrl,
         CatchyUrl: request.CatchyUrl,
         Email: request.Email,
         Duration: strconv.Itoa(int(request.Duration)),
+        Mode: Mode,
+        AdvancedMenu: AdvancedMenu,
+        SearchName: SearchName,
+        SearchEmail: SearchEmail,
     }
+}
+
+func email_renew_response(ctx context.Context,w http.ResponseWriter,request *CatchyLinkRequest) {
+    form := build_FormInput_from_CatchyLinkRequest(request)
     input_form_with_message(w,"","","<br/><br/>Link Renewal",&form)
 }
 
@@ -49,12 +89,7 @@ func email_doit_response(ctx context.Context,w http.ResponseWriter,request *Catc
 
     err = datastore.Get(ctx, key, &redirect)
     if err == nil  &&  strings.ToLower(redirect.Email) != strings.ToLower(request.Email) {
-        form := FormInput{
-            LongUrl: request.LongUrl,
-            CatchyUrl: request.CatchyUrl,
-            Email: request.Email,
-            Duration: strconv.Itoa(int(request.Duration)),
-        }
+        form := build_FormInput_from_CatchyLinkRequest(request)
         input_form_with_message(w,"globalerror","Looks like someone else already took that catchy.link. That was quick. Sorry.","",&form)
     } else {
         redirect.LongUrl = request.LongUrl
@@ -62,6 +97,7 @@ func email_doit_response(ctx context.Context,w http.ResponseWriter,request *Catc
         redirect.Email = request.Email
         redirect.Duration = request.Duration
         redirect.Expire = time.Now().Unix() + (int64(request.Duration) * seconds_per_day)
+        redirect.OptF = request.OptF
         redirect.Warn = 0
 
         _, err = datastore.Put(ctx,key,&redirect)

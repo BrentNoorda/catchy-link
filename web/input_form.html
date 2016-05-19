@@ -6,17 +6,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="https://googledrive.com/host/0B4rxOB63nnDMdE10cnlDWGxDSUU"/>
     <title>catchy.link</title>
-    <script type="text/javascript">
-      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-      if ( ("."+window.location.hostname.toLowerCase()+"/").indexOf(".catchy.link/") !== -1 ){
-        ga('create', 'UA-1754630-12', 'auto');
-        ga('send', 'pageview');
-      }
-    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script>
+    <!--google-analytics-->
     <link rel="stylesheet" media="screen" type="text/css" href="catchylink.css">
+    <style media="screen" type="text/css">
+      .advanced-option {
+        display: table-row;
+      }
+    </style>
+    <script><!--
+      function test_embed_mode() {
+        var url = $("#longurl").val();
+        var title = $("#catchyurl").val();
+        window.open("{{catchylink_root_url}}/~/embtst?url=" + url + "&cl=" + title,"catchy-test");
+      }
+
+      function mode_change(onload) {
+        var mode = $("select[name=mode]").val();
+        if ( mode == "embed" ) {
+          $("#test-embed").show(onload ? 0 : 300);
+        } else {
+          $("#test-embed").hide(onload ? 0 : 300);
+        }
+      }
+
+      function show_advanced_menu() {
+        $(".advanced-option").show(400);
+        $("#show-advanced").hide();
+        $("#advanced-menu").val("1");
+      }
+
+      $(function() {
+        var advanced_menu = $("#advanced-menu").val() === "1";
+        if ( !advanced_menu ) {
+          $("#show-advanced").show();
+          $(".advanced-option").hide();
+        }
+        $("#longurl").focus();
+        $('#test-embed a').click(function(evt) {
+          evt.preventDefault();
+          test_embed_mode();
+        });
+        $('#show-advanced a').click(function(evt) {
+          evt.preventDefault();
+          show_advanced_menu();
+        });
+        $("select[name=mode]").change(function(){mode_change(false);});
+        mode_change(true);
+      });
+    --></script>
   </head>
   <body>
     <form action="/" method="post">
@@ -73,6 +111,53 @@
             <span style="opacity:0.5;">you will be emailed a renew option for any duration longer than 1 day</span>
           </td>
         </tr>
+        <tr id="show-advanced" style="display:none;">
+          <td>&nbsp;</td>
+          <td colspan="2">
+            <a href="#">show advanced options</a>
+          </td>
+        </tr>
+        <tr class="advanced-option">
+          <td class="align-right">
+            <label>Mode</label>
+          </td>
+          <td colspan="2">
+            <select name="mode">
+              <option value="automatic" selected="selected">automatic</option>
+              <option value="prompt">prompt</option>
+              <option value="promptemail">prompt&amp;email</option>
+              <option value="embed">embed</option>
+            </select>
+            <span style="opacity:0.5;">see explanations for these modes <a href="https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/view#heading=h.jlgzavlmk170" target="catchy-test">here</a> - default:automatic</span>
+            <div style="margin-top:0.5em;display:none;" id="test-embed"><i>Not all pages embed well. You may test this page here:</i>
+              <a href="#">Test Embed Mode</a>
+            </div>
+          </td>
+        </tr>
+        <tr class="advanced-option">
+          <td class="align-right">
+            <label>Searchable:</label>
+          </td>
+          <td colspan="2">
+            by catchy name <select name="search-name">
+              <option value="srchname-on" selected="selected">true</option>
+              <option value="srchname-off">false</option>
+            </select>
+            <span style="opacity:0.5;">allow people to find an existing catchy.link by partial name (if I ever get around to implementing this feature) default:true</span>
+          </td>
+        </tr>
+        <tr class="advanced-option">
+          <td class="align-right">
+            <label>&nbsp;</label>
+          </td>
+          <td colspan="2">
+            by your email <select name="search-email">
+              <option value="srchemail-on">true</option>
+              <option value="srchemail-off" selected="selected">false</option>
+            </select>
+            <span style="opacity:0.5;">allow people to list the links created by this email address (if I ever get around to implementing this feature) default:false</span>
+          </td>
+        </tr>
         <tr>
           <td class="align-right">
             <label for="youremail">Your Email</label>
@@ -87,6 +172,7 @@
             &nbsp;
           </td>
           <td colspan="2">
+            <input type="hidden" id="advanced-menu" name="advanced-menu" value="0" />
             <button type="submit" class="button-link">create catchy.link</button>
           </td>
         </tr>
@@ -95,7 +181,9 @@
     <div class="middle-block" style="opacity:0.8;">
       <br/><hr/>
       For full details about catchy.link see this document:<br/><br/>
-      <a href="https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing" style="margin-left:2em">https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing</a>
+      <div style="margin-left:2em;"><a href="https://docs.google.com/document/d/19pBSli5Sdt9bdmLkD59PkwPeZ3BHYl1VNNjrlGpBcYI/edit?usp=sharing">
+        https://&#8203;docs.&#8203;google.com/&#8203;document/&#8203;d/&#8203;19pBS&#8203;li5Sd&#8203;t9bdm&#8203;LkD59&#8203;PkwPe&#8203;Z3BHY&#8203;l1VNN&#8203;jrlGp&#8203;BcYI/&#8203;edit?&#8203;usp=sharing
+      </a></div>
       <br/><br/>or, if you want a more memorable (&#8220;catchier&#8221;) address:<br/><br/>
       <a href="http://catchy.link/CatchyLinkManual" style="margin-left:2em">catchy.link/CatchyLinkManual</a>
     </div>
