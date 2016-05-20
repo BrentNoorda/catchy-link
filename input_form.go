@@ -98,10 +98,10 @@ func input_form(w http.ResponseWriter) {
 }
 
 func input_form_with_message(w http.ResponseWriter,fieldname string,errormsg string,extramsg string,form *FormInput) {
-    var page string
+    var page string = input_form_html()
 
     if fieldname != "" {
-        page = strings.Replace(input_form_html(),"{{"+fieldname+"-style}}","display:inline;",1)
+        page = strings.Replace(page,"{{"+fieldname+"-style}}","display:inline;",1)
         page = strings.Replace(page,"{{"+fieldname+"-table-style}}","display:table-row;",1)
         page = strings.Replace(page,"{{"+fieldname+"-errormsg}}",errormsg,1)
         page = strings.Replace(page,"$(\"#longurl\").focus();\n","$(\"#" + fieldname + "\").focus();\n",1)
