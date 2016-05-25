@@ -21,10 +21,14 @@
         </tr>
         <tr>
           <td colspan="2">
-            Congratulations.<br/><br/>
-            <a href="{{catchylink_root_url}}/{{shorturl_a}}" style="margin-left:2em;">{{catchylink_root_url}}/{{shorturl_t}}</a><br/><br/>
-            now points to:<br/><br/>
-            <a href="{{longurl_a}}" style="margin-left:2em;">{{longurl_t}}</a><br/><br/>
+            Congratulations.
+            <div class="display-long-url">
+               <a href="{{catchylink_root_url}}/{{shorturl_a}}">{{catchylink_root_url}}/{{shorturl_t}}</a>
+            </div>
+            now points to:
+            <div class="display-long-url">
+              <a href="{{longurl_a}}">{{longurl_t}}</a>
+            </div>
             This link will be valid for about {{duration}}. You can alter this catchy.link at any time using this same email address.
             <span id="reminder">You will be emailed a reminder a day or two before this expires, in case you want to renew the URL.</span>
           </td>

@@ -21,10 +21,14 @@
         </tr>
         <tr>
           <td colspan="2">
-            You have requested a memorable URL to redirect:<br/><br/>
-            <span style="margin-left:2em;">{{catchylink_root_url}}/{{shorturl_t}}</span><br/><br/>
-            to<br/><br/>
-            <a href="{{longurl_a}}" style="margin-left:2em;">{{longurl_t}}</a><br/><br/>
+            You have requested a memorable URL to redirect:
+            <div class="display-long-url">
+              {{catchylink_root_url}}/{{shorturl_t}}
+            </div>
+            to:
+            <div class="display-long-url">
+              <a href="{{longurl_a}}">{{longurl_t}}</a>
+            </div>
             An email has been sent to &quot;<b>{{youremail}}</b>&quot; to verify this request. The catchy.link will not be
             valid until you respond to that email. So go check for an email from &quot;{{myemail}}&quot;
           </td>
